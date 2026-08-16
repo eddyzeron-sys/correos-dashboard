@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <title>Bandeja - <%= emailAccount.email %></title>
+  <%- include('partials/head') %>
+</head>
+<body>
+  <div class="shell-wrap">
+    <div class="app-shell">
+      <%- include('partials/sidebar', { activeNav: 'dashboard' }) %>
+      <main class="app-main">
+        <header class="topbar">
+          <div class="list-toolbar">
+            <input type="text" id="message-search" class="toolbar-search" placeholder="Buscar en bandeja..." />
+          </div>
+          <div class="header-actions">
+            <button id="btn-refresh-inbox" class="btn-secondary btn-icon-only" title="Actualizar bandeja">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 4v6h-6"></path>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+              </svg>
+            </button>
+            <a href="/dashboard" class="btn-secondary btn-icon-only" title="Volver al dashboard">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+              </svg>
+            </a>
+          </div>
+        </header>
+
+        <% if (error) { %>
+          <p class="error"><%= error %></p>
+        <% } %>
+
+        <div class="list list-scroll">
+          <% if (!messages.length) { %>
+            <div class="list-empty">Bandeja vacía.</div>
+          <% } %>
+          <% messages.forEach(function(m) { %>
+            <div class="list-row <%= m.seen ? '' : 'unread' %>" data-uid="<%= m.uid %>" data-subject="<%= m.subject %>" data-from="<%= m.from %>">
+              <div class="list-avatar"><%= m.from.charAt(0).toUpperCase() %></div>
+              <div class="list-main">
+                <div class="list-title">
+                  <a href="/inbox/<%= emailAccount.id %>/message/<%= m.uid %>" style="color:inherit;text-decoration:none"><%= m.subject %></a>
+                </div>
+                <div class="list-sub"><%= m.from %></div>
+              </div>
+              <div class="list-meta">
+                <span class="list-date"><%= m.date ? new Date(m.date).toLocaleString('es-HN') : '' %></span>
+                <div class="icon-actions-group">
+                  <button type="button" class="icon-action btn-toggle-seen" data-seen="<%= m.seen ? '1' : '0' %>"
+                          title="<%= m.seen ? 'Marcar como no leído' : 'Marcar como leído' %>">
+                    <svg class="icon-seen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="6"></circle>
+                    </svg>
+                  </button>
+                  <form method="POST" action="/inbox/<%= emailAccount.id %>/message/<%= m.uid %>/delete" class="inline form-confirm"
+                        data-confirm-message="¿Eliminar este mensaje?">
+                    <button type="submit" class="icon-action danger-hover" title="Eliminar">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 6h18"></path>
+                        <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                      </svg>
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+
+        <nav class="pager">
+          <% if (page > 1) { %><a href="?page=<%= page - 1 %>">← Más recientes</a><% } %>
+          <% if (page * pageSize < total) { %><a href="?page=<%= page + 1 %>">Más antiguos →</a><% } %>
+        </nav>
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal de confirmación genérico -->
+  <div id="modal-confirm" class="modal hidden">
+    <div class="card">
+      <p id="confirm-message"></p>
+      <div class="row mt">
+        <button type="button" class="danger" id="confirm-yes">Sí, eliminar</button>
+        <button type="button" id="confirm-no">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Aviso flotante (toast) -->
+  <div id="toast" class="toast"></div>
+
+  <script src="/inbox.js"></script>
+</body>
+</html>

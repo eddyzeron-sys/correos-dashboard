@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <title><%= message ? message.subject : 'Mensaje no encontrado' %></title>
+  <%- include('partials/head') %>
+</head>
+<body>
+  <div class="shell-wrap">
+    <div class="app-shell">
+      <%- include('partials/sidebar', { activeNav: 'dashboard' }) %>
+      <main class="app-main">
+        <header class="topbar">
+          <div></div>
+          <div class="header-actions">
+            <% if (message) { %>
+              <form method="POST" action="/inbox/<%= emailAccount.id %>/message/<%= message.uid %>/delete" class="inline form-confirm"
+                    data-confirm-message="¿Eliminar este mensaje?">
+                <button type="submit" class="icon-action danger-hover" title="Eliminar mensaje">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 6h18"></path>
+                    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                  </svg>
+                </button>
+              </form>
+            <% } %>
+            <a href="/inbox/<%= emailAccount.id %>" class="btn-secondary btn-icon-only" title="Volver a la bandeja">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+              </svg>
+            </a>
+          </div>
+        </header>
+
+        <% if (!message) { %>
+          <p class="error">No se encontró el mensaje.</p>
+        <% } else { %>
+          <div class="card message-card">
+            <div class="row" style="align-items:flex-start; gap:14px; margin-bottom: 8px;">
+              <div class="list-avatar" style="flex-shrink:0;"><%= message.from.charAt(0).toUpperCase() %></div>
+              <div style="min-width:0;">
+                <p style="margin:0 0 2px; font-weight:700;"><%= message.from %></p>
+                <p class="muted" style="margin:0; font-size:0.85rem;"><%= message.date ? new Date(message.date).toLocaleString('es-HN') : '' %></p>
+              </div>
+            </div>
+            <h2 style="margin-top:14px;"><%= message.subject %></h2>
+
+            <% if (message.attachments.length) { %>
+              <p><strong>Adjuntos:</strong></p>
+              <ul class="attachments">
+                <% message.attachments.forEach(function(a) { %>
+                  <li>
+                    📎 <a href="/inbox/<%= emailAccount.id %>/message/<%= message.uid %>/attachment/<%= a.index %>">
+                      <%= a.filename %>
+                    </a>
+                    <span class="muted">(<%= Math.round(a.size / 1024) %> KB<%= a.inline ? ', en el cuerpo del correo' : '' %>)</span>
+                  </li>
+                <% }) %>
+              </ul>
+            <% } %>
+
+            <hr style="border:none;border-top:1px solid var(--border);margin:16px 0;" />
+            <% if (message.html) { %>
+              <iframe class="mail-frame" sandbox="" referrerpolicy="no-referrer" srcdoc="<%- message.html.replace(/\"/g, '&quot;') %>"></iframe>
+            <% } else { %>
+              <pre class="mail-text"><%= message.text %></pre>
+            <% } %>
+          </div>
+        <% } %>
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal de confirmación genérico -->
+  <div id="modal-confirm" class="modal hidden">
+    <div class="card">
+      <p id="confirm-message"></p>
+      <div class="row mt">
+        <button type="button" class="danger" id="confirm-yes">Sí, eliminar</button>
+        <button type="button" id="confirm-no">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/message.js"></script>
+</body>
+</html>

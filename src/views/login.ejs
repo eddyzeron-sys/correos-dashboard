@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <title>Iniciar sesión</title>
+  <%- include('partials/head') %>
+</head>
+<body class="centered">
+  <form class="card" method="POST" action="/login">
+    <div class="logo-dot" style="margin: 0 0 16px;">C</div>
+    <h1>Dashboard de Correos</h1>
+    <p class="muted" style="margin: 0 0 4px;">Inicia sesión para continuar</p>
+    <% if (error) { %>
+      <p class="error"><%= error %></p>
+    <% } %>
+    <label>Usuario</label>
+    <input type="text" name="username" required autofocus />
+    <label>Contraseña</label>
+    <input type="password" name="password" required />
+    <button type="submit" class="primary">Entrar</button>
+    <p class="mt muted">¿No tienes cuenta? <a href="/register">Regístrate</a></p>
+  </form>
+</body>
+</html>

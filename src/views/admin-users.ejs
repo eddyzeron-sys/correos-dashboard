@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <title>Usuarios</title>
+  <%- include('partials/head') %>
+</head>
+<body>
+  <div class="shell-wrap">
+    <div class="app-shell">
+      <%- include('partials/sidebar', { activeNav: 'users' }) %>
+      <main class="app-main">
+        <header class="topbar">
+          <h1>Usuarios</h1>
+        </header>
+
+        <% if (error) { %>
+          <p class="error"><%= error %></p>
+        <% } %>
+
+        <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Usuario</th><th>Rol</th><th>Estado</th><th>Creado</th><th>Acciones</th></tr>
+          </thead>
+          <tbody>
+            <% users.forEach(function(u) { %>
+              <tr>
+                <td><%= u.username %></td>
+                <td><%= u.role === 'admin' ? 'Admin' : 'Usuario' %></td>
+                <td>
+                  <% if (u.status === 'active') { %>Activo
+                  <% } else if (u.status === 'pending') { %>Pendiente
+                  <% } else { %>Desactivado
+                  <% } %>
+                </td>
+                <td><%= u.created_at %></td>
+                <td class="actions">
+                  <% if (u.status !== 'active') { %>
+                    <form method="POST" action="/admin/users/<%= u.id %>/approve" class="inline">
+                      <button type="submit" class="icon-action" title="Activar">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M20 6L9 17l-5-5"></path>
+                        </svg>
+                      </button>
+                    </form>
+                  <% } else if (u.role !== 'admin') { %>
+                    <form method="POST" action="/admin/users/<%= u.id %>/disable" class="inline">
+                      <button type="submit" class="icon-action" title="Desactivar">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                          <circle cx="12" cy="12" r="9"></circle>
+                          <line x1="5.5" y1="5.5" x2="18.5" y2="18.5"></line>
+                        </svg>
+                      </button>
+                    </form>
+                  <% } %>
+                  <button type="button" class="icon-action btn-edit-user" title="Cambiar contraseña" data-id="<%= u.id %>" data-username="<%= u.username %>">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3"></path>
+                    </svg>
+                  </button>
+                  <% if (u.role !== 'admin') { %>
+                    <form method="POST" action="/admin/users/<%= u.id %>/delete" class="inline form-confirm"
+                          data-confirm-message="¿Eliminar al usuario <%= u.username %>?">
+                      <button type="submit" class="icon-action danger-hover" title="Eliminar">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M3 6h18"></path>
+                          <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                        </svg>
+                      </button>
+                    </form>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div id="modal-edit-user" class="modal hidden">
+    <div class="card card-wide modal-card">
+      <button type="button" class="icon-action modal-close-btn btn-cancel" title="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+      <h2>Nueva contraseña para <span id="edit-user-label"></span></h2>
+      <form method="POST" id="form-edit-user-password">
+        <label>Contraseña nueva</label>
+        <input type="text" name="password" id="edit-user-password-field" required minlength="8" />
+        <button type="submit" class="primary">Guardar</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal de confirmación genérico -->
+  <div id="modal-confirm" class="modal hidden">
+    <div class="card">
+      <p id="confirm-message"></p>
+      <div class="row mt">
+        <button type="button" class="danger" id="confirm-yes">Sí, eliminar</button>
+        <button type="button" id="confirm-no">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Aviso flotante (toast) -->
+  <div id="toast" class="toast"></div>
+
+  <script src="/admin-users.js"></script>
+</body>
+</html>

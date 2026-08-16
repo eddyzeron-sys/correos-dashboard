@@ -1,0 +1,211 @@
+import { DatabaseSync } from "node:sqlite";
+import path from "path";
+import bcrypt from "bcryptjs";
+
+export const TAG_COLOR_ENABLED = "#16a34a";
+export const TAG_COLOR_BLOCKED = "#dc2626";
+
+export function normalizeTagColor(raw: unknown): string {
+  return raw === TAG_COLOR_BLOCKED ? TAG_COLOR_BLOCKED : TAG_COLOR_ENABLED;
+}
+
+// DATA_DIR permite apuntar la base de datos a un volumen persistente (Docker/EasyPanel).
+// Sin esa variable, se guarda en la raíz del proyecto como hasta ahora.
+const dataDir = process.env.DATA_DIR || path.join(__dirname, "..");
+const dbPath = path.join(dataDir, "data.sqlite");
+export const db = new DatabaseSync(dbPath);
+db.exec("PRAGMA journal_mode = WAL;");
+db.exec("PRAGMA foreign_keys = ON;");
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'disabled')),
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS mailcow_servers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    label TEXT NOT NULL,
+    server_url TEXT NOT NULL,
+    api_key_encrypted TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS email_accounts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    mailcow_server_id INTEGER NOT NULL REFERENCES mailcow_servers(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(id),
+    tag_id INTEGER REFERENCES tags(id) ON DELETE SET NULL,
+    domain TEXT NOT NULL,
+    local_part TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    password_encrypted TEXT NOT NULL,
+    quota_mb INTEGER NOT NULL DEFAULT 100,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS tags (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    color TEXT NOT NULL DEFAULT '${TAG_COLOR_ENABLED}',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (user_id, name)
+  );
+
+  CREATE TABLE IF NOT EXISTS email_account_tags (
+    email_account_id INTEGER NOT NULL REFERENCES email_accounts(id) ON DELETE CASCADE,
+    tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+    PRIMARY KEY (email_account_id, tag_id)
+  );
+`);
+
+function tableExists(name: string): boolean {
+  const row = db
+    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name = ?")
+    .get(name);
+  return !!row;
+}
+
+function columnExists(table: string, column: string): boolean {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  return cols.some((c) => c.name === column);
+}
+
+// email_accounts pudo haberse creado con un esquema anterior (sin user_id o
+// sin tag_id) si la DB ya existía antes de estos cambios.
+if (!columnExists("email_accounts", "user_id")) {
+  db.exec("ALTER TABLE email_accounts ADD COLUMN user_id INTEGER REFERENCES users(id);");
+}
+if (!columnExists("email_accounts", "tag_id")) {
+  db.exec("ALTER TABLE email_accounts ADD COLUMN tag_id INTEGER REFERENCES tags(id);");
+}
+
+// Migración desde el esquema viejo de un solo admin (tabla admin_user) al
+// esquema multi-usuario. Idempotente: si admin_user no existe, no hace nada;
+// el backfill de user_id solo toca filas que todavía estén en NULL.
+function migrateFromSingleAdmin(): void {
+  if (!tableExists("admin_user")) return;
+
+  const oldAdmin = db.prepare("SELECT * FROM admin_user WHERE id = 1").get() as
+    | { username: string; password_hash: string }
+    | undefined;
+
+  if (oldAdmin) {
+    const existingUser = db
+      .prepare("SELECT id FROM users WHERE username = ?")
+      .get(oldAdmin.username) as { id: number } | undefined;
+
+    const adminId = existingUser
+      ? existingUser.id
+      : Number(
+          db
+            .prepare(
+              "INSERT INTO users (username, password_hash, role, status) VALUES (?, ?, 'admin', 'active')"
+            )
+            .run(oldAdmin.username, oldAdmin.password_hash).lastInsertRowid
+        );
+
+    db.prepare("UPDATE email_accounts SET user_id = ? WHERE user_id IS NULL").run(adminId);
+
+    console.log(`[migración] admin_user -> users (id=${adminId}, '${oldAdmin.username}')`);
+  }
+
+  db.exec("DROP TABLE admin_user;");
+}
+
+migrateFromSingleAdmin();
+
+// Migración de "un correo, una etiqueta" (columna tag_id) a "un correo, varias
+// etiquetas" (tabla email_account_tags). Idempotente: INSERT OR IGNORE + PK.
+function migrateSingleTagToMulti(): void {
+  if (!columnExists("email_accounts", "tag_id")) return;
+  const rows = db
+    .prepare("SELECT id, tag_id FROM email_accounts WHERE tag_id IS NOT NULL")
+    .all() as { id: number; tag_id: number }[];
+  for (const row of rows) {
+    db.prepare(
+      "INSERT OR IGNORE INTO email_account_tags (email_account_id, tag_id) VALUES (?, ?)"
+    ).run(row.id, row.tag_id);
+  }
+}
+migrateSingleTagToMulti();
+
+// Cualquier usuario ya existente que todavía no tenga etiquetas (por ejemplo
+// el admin de antes de que existiera esta función) recibe las de ejemplo.
+function backfillDefaultTags(): void {
+  const usersWithoutTags = db
+    .prepare(
+      `SELECT id FROM users WHERE id NOT IN (SELECT DISTINCT user_id FROM tags)`
+    )
+    .all() as { id: number }[];
+  for (const u of usersWithoutTags) {
+    seedDefaultTagsForUser(u.id);
+  }
+}
+backfillDefaultTags();
+
+export function seedDefaultTagsForUser(userId: number): void {
+  db.prepare(
+    `INSERT OR IGNORE INTO tags (user_id, name, color) VALUES (?, 'Depop', '${TAG_COLOR_ENABLED}')`
+  ).run(userId);
+  db.prepare(
+    `INSERT OR IGNORE INTO tags (user_id, name, color) VALUES (?, 'Vinted', '${TAG_COLOR_ENABLED}')`
+  ).run(userId);
+}
+
+export function seedFirstAdminIfMissing(username: string, plainPassword: string): void {
+  const anyUser = db.prepare("SELECT id FROM users LIMIT 1").get();
+  if (anyUser) return;
+  const hash = bcrypt.hashSync(plainPassword, 12);
+  const info = db
+    .prepare(
+      "INSERT INTO users (username, password_hash, role, status) VALUES (?, ?, 'admin', 'active')"
+    )
+    .run(username, hash);
+  seedDefaultTagsForUser(Number(info.lastInsertRowid));
+  console.log(`[setup] Usuario admin '${username}' creado.`);
+}
+
+export interface UserRow {
+  id: number;
+  username: string;
+  password_hash: string;
+  role: "admin" | "user";
+  status: "pending" | "active" | "disabled";
+  created_at: string;
+}
+
+export interface MailcowServerRow {
+  id: number;
+  label: string;
+  server_url: string;
+  api_key_encrypted: string;
+  created_at: string;
+}
+
+export interface EmailAccountRow {
+  id: number;
+  mailcow_server_id: number;
+  user_id: number | null;
+  domain: string;
+  local_part: string;
+  email: string;
+  password_encrypted: string;
+  quota_mb: number;
+  created_at: string;
+}
+
+export interface TagRow {
+  id: number;
+  user_id: number;
+  name: string;
+  color: string;
+  created_at: string;
+}
+
+export const MAX_QUOTA_MB = 100;

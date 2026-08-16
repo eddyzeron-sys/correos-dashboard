@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <title>Conectar Mailcow</title>
+  <%- include('partials/head') %>
+</head>
+<body>
+  <div class="shell-wrap">
+    <div class="app-shell">
+      <%- include('partials/sidebar', { activeNav: 'setup' }) %>
+      <main class="app-main">
+        <header class="topbar">
+          <h1>Conectar servidor de Mailcow</h1>
+        </header>
+        <p class="muted">Esto solo se hace una vez. Después la app no vuelve a pedir esto.</p>
+
+        <% if (error) { %>
+          <p class="error"><%= error %></p>
+        <% } %>
+
+        <% if (servers.length) { %>
+          <h2>Servidores conectados</h2>
+          <div class="table-scroll">
+          <table>
+            <thead><tr><th>Etiqueta</th><th>Servidor</th><th></th></tr></thead>
+            <tbody>
+              <% servers.forEach(function(s) { %>
+                <tr>
+                  <td><%= s.label %></td>
+                  <td><%= s.server_url %></td>
+                  <td class="actions">
+                    <form method="POST" action="/setup/<%= s.id %>/delete" class="inline form-confirm"
+                          data-confirm-message="¿Eliminar la conexión a &quot;<%= s.label %>&quot;?">
+                      <button type="submit" class="icon-action danger-hover" title="Eliminar">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M3 6h18"></path>
+                          <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                        </svg>
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+          </div>
+        <% } %>
+
+        <h2>Agregar servidor de Mailcow</h2>
+        <form class="card card-wide" method="POST" action="/setup">
+          <label>Etiqueta (para identificarlo, ej. "VPS Hostinger")</label>
+          <input type="text" name="label" required value="VPS Hostinger" />
+
+          <label>Servidor (ej. https://72.60.174.46:8443)</label>
+          <input type="text" name="server_url" required placeholder="https://72.60.174.46:8443" />
+
+          <label>API Key (Mailcow → Sistema → Configuración → Access → API, acceso de lectura y escritura)</label>
+          <input type="text" name="api_key" required />
+
+          <button type="submit" class="primary">Conectar y probar</button>
+        </form>
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal de confirmación genérico -->
+  <div id="modal-confirm" class="modal hidden">
+    <div class="card">
+      <p id="confirm-message"></p>
+      <div class="row mt">
+        <button type="button" class="danger" id="confirm-yes">Sí, eliminar</button>
+        <button type="button" id="confirm-no">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/setup.js"></script>
+</body>
+</html>
