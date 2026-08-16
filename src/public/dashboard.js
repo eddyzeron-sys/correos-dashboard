@@ -17,33 +17,6 @@ function randomLocalPart() {
   return first + last;
 }
 
-function tagCardHtml(id, name, color, checked) {
-  const greenActive = color === "#16a34a" ? " active" : "";
-  const redActive = color === "#dc2626" ? " active" : "";
-  return (
-    '<div class="tag-card' + (checked ? " selected" : "") + '" data-tag-id="' + id + '">' +
-    '<label class="tag-card-name">' +
-    '<input type="checkbox" name="tag_ids" value="' + id + '" data-tag-checkbox' + (checked ? " checked" : "") + " />" +
-    '<span class="dot" style="background: ' + color + '"></span>' + name +
-    "</label>" +
-    '<div class="tag-card-actions">' +
-    '<button type="button" class="tag-card-btn color-dot-btn' + greenActive + '" data-color="#16a34a" title="Habilitada" style="background:#16a34a"></button>' +
-    '<button type="button" class="tag-card-btn color-dot-btn' + redActive + '" data-color="#dc2626" title="Bloqueada" style="background:#dc2626"></button>' +
-    '<button type="button" class="tag-card-btn tag-del-btn" data-tag-id="' + id + '" data-tag-name="' + name + '" title="Eliminar etiqueta">✕</button>' +
-    "</div>" +
-    "</div>"
-  );
-}
-
-function tagCardHtmlSimple(id, name, color) {
-  return (
-    '<div class="tag-card"><label class="tag-card-name">' +
-    '<input type="checkbox" name="tag_ids" value="' + id + '" data-tag-checkbox />' +
-    '<span class="dot" style="background: ' + color + '"></span>' + name +
-    "</label></div>"
-  );
-}
-
 // fetch() que le avisa al servidor que es una petición AJAX (para que responda
 // 401 en JSON si la sesión expiró, en vez de redirigir a /login como HTML).
 function apiFetch(url, options) {
@@ -110,46 +83,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const editEmailLabel = document.getElementById("edit-email-label");
   const formEditTags = document.getElementById("form-edit-tags");
   const editTagChecklist = document.getElementById("edit-tag-checklist");
-  const addTagChecklist = document.getElementById("add-tag-checklist");
   const newTagName = document.getElementById("new-tag-name");
   const newTagColorPicker = document.getElementById("new-tag-color-picker");
-
-  // Clic en el nombre de una etiqueta (dentro de una tarjeta) resalta la
-  // tarjeta como "seleccionada" — reemplaza al checkbox visible.
-  function wireTagCardSelection(container) {
-    if (!container) return;
-    container.addEventListener("change", (e) => {
-      const cb = e.target.closest("[data-tag-checkbox]");
-      if (!cb) return;
-      cb.closest(".tag-card").classList.toggle("selected", cb.checked);
-    });
-  }
-  wireTagCardSelection(editTagChecklist);
-  wireTagCardSelection(addTagChecklist);
-
-  // Marcar/desmarcar una etiqueta en "Editar correo" se guarda al toque, igual
-  // que el color — antes hacía falta un clic aparte en "Guardar etiquetas" y
-  // era fácil olvidarlo, dejando etiquetas marcadas en el modal pero sin
-  // aplicar de verdad al correo.
-  if (editTagChecklist) {
-    editTagChecklist.addEventListener("change", (e) => {
-      const cb = e.target.closest("[data-tag-checkbox]");
-      if (!cb) return;
-      const checkedIds = Array.from(editTagChecklist.querySelectorAll("[data-tag-checkbox]:checked")).map(
-        (c) => c.value
-      );
-      const body = checkedIds.map((id) => `tag_ids=${encodeURIComponent(id)}`).join("&");
-      apiFetch(formEditTags.action, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body,
-      })
-        .then(() => location.reload())
-        .catch((err) => {
-          if (err.message !== "unauthenticated") showToast("No se pudo guardar la etiqueta.");
-        });
-    });
-  }
 
   document.querySelectorAll(".btn-cancel").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -171,23 +106,29 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // El color de una etiqueta es propio de cada correo — la misma etiqueta
+  // puede estar en verde en un correo y en rojo (o sin aplicar) en otro.
   document.querySelectorAll(".btn-edit").forEach((btn) => {
     btn.addEventListener("click", () => {
       const id = btn.dataset.id;
       const email = btn.dataset.email;
-      const assignedIds = (btn.dataset.tagIds || "").split(",").filter(Boolean);
+      const tagColors = JSON.parse(btn.dataset.tagColors || "{}");
       editEmailLabel.textContent = email;
-      formEditTags.action = `/email-accounts/${id}/tags`;
-      editTagChecklist.querySelectorAll("[data-tag-checkbox]").forEach((cb) => {
-        const isChecked = assignedIds.includes(cb.value);
-        cb.checked = isChecked;
-        cb.closest(".tag-card").classList.toggle("selected", isChecked);
+      formEditTags.dataset.emailId = id;
+      editTagChecklist.querySelectorAll(".tag-card").forEach((card) => {
+        const color = tagColors[card.dataset.tagId];
+        card.classList.toggle("selected", !!color);
+        card.querySelectorAll(".color-dot-btn").forEach((dot) => {
+          dot.classList.toggle("active", dot.dataset.color === color);
+        });
       });
       modalEdit.classList.remove("hidden");
     });
   });
 
-  // Crear etiqueta nueva: escribe el nombre y da clic directo en el color.
+  // Crear etiqueta nueva: escribe el nombre y da clic directo en el color —
+  // se crea (o reusa si ya existe con ese nombre) y se aplica a este correo
+  // de una vez, sin pasos aparte.
   if (newTagColorPicker) {
     newTagColorPicker.querySelectorAll(".color-dot-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -197,7 +138,8 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
         const color = btn.dataset.color;
-        apiFetch("/tags", {
+        const emailId = formEditTags.dataset.emailId;
+        apiFetch(`/email-accounts/${emailId}/tags/new`, {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: `name=${encodeURIComponent(name)}&color=${encodeURIComponent(color)}`,
@@ -208,17 +150,7 @@ document.addEventListener("DOMContentLoaded", () => {
               alert(data.error);
               return;
             }
-            const emptyMsg = document.getElementById("edit-tag-empty-msg");
-            if (emptyMsg) emptyMsg.remove();
-            editTagChecklist.insertAdjacentHTML("beforeend", tagCardHtml(data.id, data.name, data.color, true));
-            if (addTagChecklist) {
-              addTagChecklist.insertAdjacentHTML("beforeend", tagCardHtmlSimple(data.id, data.name, data.color));
-            }
-            newTagName.value = "";
-            // La etiqueta ya existe pero todavía no está asignada a este correo —
-            // guardamos de una vez para que no haga falta un segundo clic en
-            // "Guardar etiquetas" (eso dejaba etiquetas creadas pero sin aplicar).
-            formEditTags.requestSubmit();
+            location.reload();
           })
           .catch((err) => {
             if (err.message !== "unauthenticated") alert("No se pudo crear la etiqueta.");
@@ -227,8 +159,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Cambiar color (habilitada/bloqueada) de una etiqueta ya existente: clic
-  // directo en el punto que quieras, dentro de su tarjeta.
+  // Aplicar una etiqueta ya existente a este correo con el color elegido (o
+  // cambiarle el color si ya estaba aplicada aquí).
   editTagChecklist.addEventListener("click", (e) => {
     const btn = e.target.closest(".color-dot-btn");
     if (!btn) return;
@@ -237,7 +169,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!card) return;
     const tagId = card.dataset.tagId;
     const color = btn.dataset.color;
-    apiFetch(`/tags/${tagId}/color`, {
+    const emailId = formEditTags.dataset.emailId;
+    apiFetch(`/email-accounts/${emailId}/tags/${tagId}`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: `color=${encodeURIComponent(color)}`,
@@ -245,20 +178,22 @@ document.addEventListener("DOMContentLoaded", () => {
       .then((r) => r.json())
       .then(() => location.reload())
       .catch((err) => {
-        if (err.message !== "unauthenticated") alert("No se pudo cambiar el color.");
+        if (err.message !== "unauthenticated") alert("No se pudo guardar la etiqueta.");
       });
   });
 
-  // Eliminar una etiqueta por completo (se quita de todos los correos que la tengan).
+  // Quitar la etiqueta de este correo en particular (sigue existiendo para
+  // usarla en los demás).
   editTagChecklist.addEventListener("click", (e) => {
-    const btn = e.target.closest(".tag-del-btn");
+    const btn = e.target.closest(".tag-remove-btn");
     if (!btn) return;
-    showConfirm(`¿Eliminar la etiqueta "${btn.dataset.tagName}"? Se quita de todos tus correos.`, () => {
-      apiFetch(`/tags/${btn.dataset.tagId}/delete`, { method: "POST" })
+    const emailId = formEditTags.dataset.emailId;
+    showConfirm(`¿Quitar la etiqueta "${btn.dataset.tagName}" de este correo?`, () => {
+      apiFetch(`/email-accounts/${emailId}/tags/${btn.dataset.tagId}/remove`, { method: "POST" })
         .then((r) => r.json())
         .then(() => location.reload())
         .catch((err) => {
-          if (err.message !== "unauthenticated") alert("No se pudo eliminar la etiqueta.");
+          if (err.message !== "unauthenticated") alert("No se pudo quitar la etiqueta.");
         });
     });
   });

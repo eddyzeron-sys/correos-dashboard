@@ -452,11 +452,8 @@ button.link:hover { background: none; color: var(--accent-dark); }
   gap: 6px;
   font-size: 0.85rem;
   font-weight: 600;
-  cursor: pointer;
   user-select: none;
 }
-.tag-card-name input { position: absolute; opacity: 0; width: 0; height: 0; }
-.tag-card-name .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
 .tag-card-actions { display: flex; gap: 6px; }
 .tag-card-btn {

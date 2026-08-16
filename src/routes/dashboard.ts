@@ -1,6 +1,6 @@
 import { Router } from "express";
 import crypto from "crypto";
-import { db, MailcowServerRow, EmailAccountRow, TagRow, MAX_QUOTA_MB } from "../db";
+import { db, normalizeTagColor, MailcowServerRow, EmailAccountRow, TagRow, MAX_QUOTA_MB } from "../db";
 import { encrypt } from "../crypto";
 import { requireAuth } from "../middleware/require-auth";
 import { listDomains } from "../mailcow/domains";
@@ -10,9 +10,12 @@ import { getUnseenCount } from "../mail/imap-client";
 const router = Router();
 router.use(requireAuth);
 
+// El color es un atributo de la relación correo↔etiqueta, no de la etiqueta en
+// sí — la misma etiqueta puede estar en verde en un correo y en rojo en otro.
+type AttachedTag = { id: number; name: string; color: string };
 type EmailAccountWithExtras = EmailAccountRow & {
   owner_username?: string;
-  tags: TagRow[];
+  tags: AttachedTag[];
 };
 
 function getFirstMailcowServer(): MailcowServerRow | undefined {
@@ -26,14 +29,14 @@ function attachTags(emails: (EmailAccountRow & { owner_username?: string })[]): 
   const placeholders = emails.map(() => "?").join(",");
   const rows = db
     .prepare(
-      `SELECT eat.email_account_id, t.* FROM email_account_tags eat
+      `SELECT eat.email_account_id, eat.color, t.id, t.name FROM email_account_tags eat
        JOIN tags t ON t.id = eat.tag_id
        WHERE eat.email_account_id IN (${placeholders})
        ORDER BY t.name`
     )
-    .all(...emails.map((e) => e.id)) as unknown as (TagRow & { email_account_id: number })[];
+    .all(...emails.map((e) => e.id)) as unknown as (AttachedTag & { email_account_id: number })[];
 
-  const byEmail = new Map<number, TagRow[]>();
+  const byEmail = new Map<number, AttachedTag[]>();
   for (const row of rows) {
     const { email_account_id, ...tag } = row;
     if (!byEmail.has(email_account_id)) byEmail.set(email_account_id, []);
@@ -76,16 +79,12 @@ function getUserTags(req: import("express").Request): TagRow[] {
   return db.prepare("SELECT * FROM tags WHERE user_id = ? ORDER BY name").all(req.user!.id) as unknown as TagRow[];
 }
 
-// Filtra una lista de tag_id a solo los que pertenecen al propio usuario
-// (evita que alguien le pegue etiquetas ajenas a un correo por ID a mano).
-function filterOwnTagIds(userId: number, rawTagIds: unknown): number[] {
-  const ids = (Array.isArray(rawTagIds) ? rawTagIds : rawTagIds ? [rawTagIds] : []) as string[];
-  if (ids.length === 0) return [];
-  const placeholders = ids.map(() => "?").join(",");
-  const rows = db
-    .prepare(`SELECT id FROM tags WHERE user_id = ? AND id IN (${placeholders})`)
-    .all(userId, ...ids) as { id: number }[];
-  return rows.map((r) => r.id);
+// Una etiqueta solo se puede usar si pertenece a quien está haciendo el cambio
+// (evita que alguien le pegue una etiqueta ajena a un correo por ID a mano).
+function getOwnedTag(userId: number, tagId: string): { id: number } | undefined {
+  return db.prepare("SELECT id FROM tags WHERE id = ? AND user_id = ?").get(tagId, userId) as
+    | { id: number }
+    | undefined;
 }
 
 router.get("/dashboard", async (req, res) => {
@@ -131,7 +130,7 @@ router.post("/email-accounts", async (req, res) => {
     res.redirect("/setup");
     return;
   }
-  const { local_part, tag_ids } = req.body as { local_part?: string; tag_ids?: unknown };
+  const { local_part } = req.body as { local_part?: string };
 
   // Único dominio disponible por ahora: el panel no deja elegir, siempre usa el mismo.
   let domain = "";
@@ -155,22 +154,12 @@ router.post("/email-accounts", async (req, res) => {
     const quota = MAX_QUOTA_MB;
 
     const fullEmail = `${local_part}@${domain}`;
-    const ownTagIds = filterOwnTagIds(req.user!.id, tag_ids);
 
     await createMailbox(server, local_part, domain, password, quota);
-    const info = db
-      .prepare(
-        `INSERT INTO email_accounts (mailcow_server_id, user_id, domain, local_part, email, password_encrypted, quota_mb)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
-      )
-      .run(server.id, req.user!.id, domain, local_part, fullEmail, encrypt(password), quota);
-    const newId = Number(info.lastInsertRowid);
-    for (const tagId of ownTagIds) {
-      db.prepare("INSERT OR IGNORE INTO email_account_tags (email_account_id, tag_id) VALUES (?, ?)").run(
-        newId,
-        tagId
-      );
-    }
+    db.prepare(
+      `INSERT INTO email_accounts (mailcow_server_id, user_id, domain, local_part, email, password_encrypted, quota_mb)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).run(server.id, req.user!.id, domain, local_part, fullEmail, encrypt(password), quota);
     res.redirect("/dashboard");
   } catch (err) {
     res.render("dashboard", {
@@ -183,23 +172,73 @@ router.post("/email-accounts", async (req, res) => {
   }
 });
 
-router.post("/email-accounts/:id/tags", async (req, res) => {
+// Crea la etiqueta si no existe (o reusa la que ya tenga ese nombre) y la
+// aplica de una vez al correo con el color elegido.
+// Nota: esta ruta literal "/new" debe registrarse ANTES que "/:tagId" — si no,
+// Express la interpreta como si "new" fuera un tagId y nunca llega aquí.
+router.post("/email-accounts/:id/tags/new", (req, res) => {
   const emailAccount = getOwnedEmailAccount(req, req.params.id);
   if (!emailAccount) {
-    res.redirect("/dashboard");
+    res.status(404).json({ error: "No encontrado" });
     return;
   }
-  // Las etiquetas se resuelven contra las de quien hace el cambio (si un admin
-  // etiqueta el correo de otro usuario, usa sus propias etiquetas).
-  const tagIds = filterOwnTagIds(req.user!.id, (req.body as Record<string, unknown>).tag_ids);
-  db.prepare("DELETE FROM email_account_tags WHERE email_account_id = ?").run(emailAccount.id);
-  for (const tagId of tagIds) {
-    db.prepare("INSERT OR IGNORE INTO email_account_tags (email_account_id, tag_id) VALUES (?, ?)").run(
-      emailAccount.id,
-      tagId
-    );
+  const { name } = req.body as Record<string, string>;
+  const trimmedName = (name || "").trim();
+  if (!trimmedName) {
+    res.status(400).json({ error: "El nombre es obligatorio." });
+    return;
   }
-  res.redirect("/dashboard");
+  const color = normalizeTagColor((req.body as Record<string, string>).color);
+
+  let tag = db
+    .prepare("SELECT id, name FROM tags WHERE user_id = ? AND name = ?")
+    .get(req.user!.id, trimmedName) as { id: number; name: string } | undefined;
+  if (!tag) {
+    const info = db
+      .prepare("INSERT INTO tags (user_id, name, color) VALUES (?, ?, ?)")
+      .run(req.user!.id, trimmedName, color);
+    tag = { id: Number(info.lastInsertRowid), name: trimmedName };
+  }
+
+  db.prepare(
+    `INSERT INTO email_account_tags (email_account_id, tag_id, color) VALUES (?, ?, ?)
+     ON CONFLICT(email_account_id, tag_id) DO UPDATE SET color = excluded.color`
+  ).run(emailAccount.id, tag.id, color);
+  res.json({ id: tag.id, name: tag.name, color });
+});
+
+// Aplica una etiqueta (ya existente) a un correo con un color específico, o le
+// cambia el color si ya estaba aplicada — el color es propio de esta relación,
+// así la misma etiqueta puede verse distinta en cada correo.
+router.post("/email-accounts/:id/tags/:tagId", (req, res) => {
+  const emailAccount = getOwnedEmailAccount(req, req.params.id);
+  const tag = getOwnedTag(req.user!.id, req.params.tagId);
+  if (!emailAccount || !tag) {
+    res.status(404).json({ error: "No encontrado" });
+    return;
+  }
+  const color = normalizeTagColor((req.body as Record<string, string>).color);
+  db.prepare(
+    `INSERT INTO email_account_tags (email_account_id, tag_id, color) VALUES (?, ?, ?)
+     ON CONFLICT(email_account_id, tag_id) DO UPDATE SET color = excluded.color`
+  ).run(emailAccount.id, tag.id, color);
+  res.json({ ok: true, color });
+});
+
+// Quita la etiqueta de este correo en particular — la etiqueta sigue
+// existiendo para usarla en otros correos.
+router.post("/email-accounts/:id/tags/:tagId/remove", (req, res) => {
+  const emailAccount = getOwnedEmailAccount(req, req.params.id);
+  const tag = getOwnedTag(req.user!.id, req.params.tagId);
+  if (!emailAccount || !tag) {
+    res.status(404).json({ error: "No encontrado" });
+    return;
+  }
+  db.prepare("DELETE FROM email_account_tags WHERE email_account_id = ? AND tag_id = ?").run(
+    emailAccount.id,
+    tag.id
+  );
+  res.json({ ok: true });
 });
 
 router.post("/email-accounts/:id/delete", async (req, res) => {

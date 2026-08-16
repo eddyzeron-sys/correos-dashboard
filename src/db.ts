@@ -60,6 +60,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS email_account_tags (
     email_account_id INTEGER NOT NULL REFERENCES email_accounts(id) ON DELETE CASCADE,
     tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+    color TEXT NOT NULL DEFAULT '${TAG_COLOR_ENABLED}',
     PRIMARY KEY (email_account_id, tag_id)
   );
 `);
@@ -134,6 +135,20 @@ function migrateSingleTagToMulti(): void {
   }
 }
 migrateSingleTagToMulti();
+
+// El color pasó de ser propiedad de la etiqueta (compartido en todos los
+// correos) a ser propiedad de la relación correo↔etiqueta (cada correo puede
+// tener la misma etiqueta en un color distinto). Backfill: las relaciones que
+// ya existían heredan el color que tenía su etiqueta en ese momento, así no
+// cambia nada visualmente para nadie.
+function migrateTagColorToAttachment(): void {
+  if (columnExists("email_account_tags", "color")) return;
+  db.exec(`ALTER TABLE email_account_tags ADD COLUMN color TEXT NOT NULL DEFAULT '${TAG_COLOR_ENABLED}';`);
+  db.exec(
+    `UPDATE email_account_tags SET color = (SELECT color FROM tags WHERE tags.id = email_account_tags.tag_id)`
+  );
+}
+migrateTagColorToAttachment();
 
 // Cualquier usuario ya existente que todavía no tenga etiquetas (por ejemplo
 // el admin de antes de que existiera esta función) recibe las de ejemplo.
