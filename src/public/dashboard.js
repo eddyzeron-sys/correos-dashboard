@@ -191,6 +191,10 @@ document.addEventListener("DOMContentLoaded", () => {
               addTagChecklist.insertAdjacentHTML("beforeend", tagCardHtmlSimple(data.id, data.name, data.color));
             }
             newTagName.value = "";
+            // La etiqueta ya existe pero todavía no está asignada a este correo —
+            // guardamos de una vez para que no haga falta un segundo clic en
+            // "Guardar etiquetas" (eso dejaba etiquetas creadas pero sin aplicar).
+            formEditTags.requestSubmit();
           })
           .catch((err) => {
             if (err.message !== "unauthenticated") alert("No se pudo crear la etiqueta.");
