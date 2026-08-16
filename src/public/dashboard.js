@@ -127,6 +127,30 @@ document.addEventListener("DOMContentLoaded", () => {
   wireTagCardSelection(editTagChecklist);
   wireTagCardSelection(addTagChecklist);
 
+  // Marcar/desmarcar una etiqueta en "Editar correo" se guarda al toque, igual
+  // que el color — antes hacía falta un clic aparte en "Guardar etiquetas" y
+  // era fácil olvidarlo, dejando etiquetas marcadas en el modal pero sin
+  // aplicar de verdad al correo.
+  if (editTagChecklist) {
+    editTagChecklist.addEventListener("change", (e) => {
+      const cb = e.target.closest("[data-tag-checkbox]");
+      if (!cb) return;
+      const checkedIds = Array.from(editTagChecklist.querySelectorAll("[data-tag-checkbox]:checked")).map(
+        (c) => c.value
+      );
+      const body = checkedIds.map((id) => `tag_ids=${encodeURIComponent(id)}`).join("&");
+      apiFetch(formEditTags.action, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body,
+      })
+        .then(() => location.reload())
+        .catch((err) => {
+          if (err.message !== "unauthenticated") showToast("No se pudo guardar la etiqueta.");
+        });
+    });
+  }
+
   document.querySelectorAll(".btn-cancel").forEach((btn) => {
     btn.addEventListener("click", () => {
       modalAdd.classList.add("hidden");
