@@ -26,13 +26,20 @@ export function mailcowClientFor(server: MailcowServerRow) {
     return res.data as T;
   }
 
+  // Mailcow no solo usa "error" para indicar que algo falló — "danger" también
+  // es una falla real (ej. al chocar con el límite de buzones del dominio),
+  // solo que la app antes no lo detectaba y guardaba el correo como creado
+  // aunque Mailcow lo hubiera rechazado.
+  const FAILURE_TYPES = new Set(["error", "danger"]);
+
   async function apiPost<T = unknown>(path: string, body: unknown): Promise<T> {
     const res = await http.post(`/api/v1${path}`, body);
     const data = res.data as any;
     const results = Array.isArray(data) ? data : [data];
-    const errored = results.find((r) => r && r.type === "error");
+    const errored = results.find((r) => r && FAILURE_TYPES.has(r.type));
     if (errored) {
-      throw new MailcowError(errored.msg || "Error desconocido de Mailcow");
+      const msg = Array.isArray(errored.msg) ? errored.msg.join(" ") : errored.msg;
+      throw new MailcowError(msg || "Error desconocido de Mailcow");
     }
     return data as T;
   }

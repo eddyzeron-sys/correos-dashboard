@@ -162,12 +162,16 @@ router.post("/email-accounts", async (req, res) => {
     ).run(server.id, req.user!.id, domain, local_part, fullEmail, encrypt(password), quota);
     res.redirect("/dashboard");
   } catch (err) {
+    const rawMessage = (err as Error).message;
+    const error = rawMessage.includes("max_mailbox_exceeded")
+      ? "El dominio llegó a su límite de buzones en Mailcow. Pide a un administrador que lo aumente (Mailcow → Dominios → editar límite de buzones)."
+      : `No se pudo crear el correo en Mailcow: ${rawMessage}`;
     res.render("dashboard", {
       emails: listEmailsFor(req),
       tags: getUserTags(req),
       domain,
       activeNav: "dashboard",
-      error: `No se pudo crear el correo en Mailcow: ${(err as Error).message}`,
+      error,
     });
   }
 });
@@ -248,7 +252,14 @@ router.post("/email-accounts/:id/delete", async (req, res) => {
     res.redirect("/dashboard");
     return;
   }
-  await deleteMailbox(server, emailAccount.email);
+  try {
+    await deleteMailbox(server, emailAccount.email);
+  } catch (err) {
+    // Si Mailcow ya no tiene este buzón (ej. nunca se llegó a crear de verdad
+    // por un error silencioso previo), no tiene sentido bloquear al usuario
+    // para que pueda limpiar la fila de su propio dashboard.
+    console.error(`No se pudo borrar ${emailAccount.email} en Mailcow (se borra igual localmente):`, err);
+  }
   db.prepare("DELETE FROM email_accounts WHERE id = ?").run(emailAccount.id);
   res.redirect("/dashboard?deleted=1");
 });
