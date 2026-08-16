@@ -23,6 +23,10 @@ for (const key of requiredEnv) {
 seedFirstAdminIfMissing(process.env.ADMIN_USER as string, process.env.ADMIN_PASS as string);
 
 const app = express();
+// Detrás de un proxy (Traefik en EasyPanel u otro reverse proxy) hay que confiar
+// en el primer salto para que req.ip/X-Forwarded-For se lean bien — si no,
+// express-rate-limit truena en cada petición y las cookies "secure" no funcionan.
+app.set("trust proxy", 1);
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "..", "src", "views"));
 app.use(express.urlencoded({ extended: true }));
