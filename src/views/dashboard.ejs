@@ -14,10 +14,16 @@
             <input type="text" id="email-search" class="toolbar-search" placeholder="Buscar correo..." />
             <select id="email-filter" class="toolbar-filter">
               <option value="all">Todos</option>
-              <option value="new">Con mensajes nuevos</option>
+              <option value="new">Correos nuevos primero</option>
               <option value="recent">Más recientes</option>
               <option value="az">A-Z</option>
             </select>
+            <button type="button" id="btn-reset-filter" class="icon-action" title="Quitar filtro">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
           </div>
           <div class="header-actions">
             <button id="btn-refresh" class="btn-secondary btn-icon-only" title="Buscar correos nuevos en todos los buzones">

@@ -259,10 +259,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Buscador + filtro de la lista de correos (con mensajes nuevos / recientes / A-Z).
+  // Buscador + filtro de la lista de correos (nuevos primero / recientes / A-Z).
   const emailSearch = document.getElementById("email-search");
   const emailFilter = document.getElementById("email-filter");
+  const btnResetFilter = document.getElementById("btn-reset-filter");
   const emailList = document.querySelector(".list");
+  const FILTER_STORAGE_KEY = "dashboardEmailFilter";
 
   function applyEmailFilters() {
     if (!emailList) return;
@@ -272,17 +274,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
     rows.forEach((row) => {
       const email = (row.dataset.email || "").toLowerCase();
-      let visible = !query || email.includes(query);
-      if (visible && mode === "new") {
-        const badge = row.querySelector(".new-mail-badge");
-        visible = !!badge && !badge.classList.contains("hidden");
-      }
+      const visible = !query || email.includes(query);
       row.style.display = visible ? "" : "none";
     });
+
+    function hasNewMail(row) {
+      const badge = row.querySelector(".new-mail-badge");
+      return !!badge && !badge.classList.contains("hidden");
+    }
 
     const sorted = rows.slice();
     if (mode === "recent") {
       sorted.sort((a, b) => (b.dataset.created || "").localeCompare(a.dataset.created || ""));
+    } else if (mode === "new") {
+      // Los que tienen correos nuevos van primero; el resto queda alfabético.
+      sorted.sort((a, b) => {
+        const diff = Number(hasNewMail(b)) - Number(hasNewMail(a));
+        return diff !== 0 ? diff : (a.dataset.email || "").localeCompare(b.dataset.email || "");
+      });
     } else {
       sorted.sort((a, b) => (a.dataset.email || "").localeCompare(b.dataset.email || ""));
     }
@@ -291,11 +300,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (emailSearch) emailSearch.addEventListener("input", applyEmailFilters);
   if (emailFilter) {
+    // Recuerda el filtro elegido entre recargas de la página.
+    const savedFilter = localStorage.getItem(FILTER_STORAGE_KEY);
+    if (savedFilter) {
+      emailFilter.value = savedFilter;
+      applyEmailFilters();
+    }
     emailFilter.addEventListener("change", () => {
+      localStorage.setItem(FILTER_STORAGE_KEY, emailFilter.value);
       if (emailFilter.value === "new" && btnRefresh) {
         btnRefresh.click();
         return;
       }
+      applyEmailFilters();
+    });
+  }
+  if (btnResetFilter) {
+    btnResetFilter.addEventListener("click", () => {
+      if (emailFilter) emailFilter.value = "all";
+      if (emailSearch) emailSearch.value = "";
+      localStorage.removeItem(FILTER_STORAGE_KEY);
       applyEmailFilters();
     });
   }
