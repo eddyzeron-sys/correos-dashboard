@@ -1,7 +1,7 @@
 import { Router, Request } from "express";
 import { db, EmailAccountRow, TrackingRow } from "../db";
 import { requireAuth } from "../middleware/require-auth";
-import { scanForShippedMessages, setMessageSeen } from "../mail/imap-client";
+import { scanForShippedMessages, setMessageSeen, getSeenStatusForUids } from "../mail/imap-client";
 import { extractCandidateLinks, findTrackingInLinks } from "../mail/tracking-links";
 
 const router = Router();
@@ -36,6 +36,25 @@ router.post("/trackings/scan", async (req, res) => {
   const results = await Promise.all(
     accounts.map(async (account) => {
       try {
+        // Resincroniza el leído/no leído de los trackings que ya tenía este
+        // correo (ej. los que se guardaron antes de que existiera este
+        // seguimiento, o si se marcaron desde otro cliente de correo).
+        const existing = db
+          .prepare("SELECT id, message_uid FROM trackings WHERE email_account_id = ?")
+          .all(account.id) as { id: number; message_uid: number }[];
+        if (existing.length > 0) {
+          const seenMap = await getSeenStatusForUids(
+            account,
+            existing.map((row) => row.message_uid)
+          );
+          for (const row of existing) {
+            const seen = seenMap.get(row.message_uid);
+            if (seen !== undefined) {
+              db.prepare("UPDATE trackings SET seen = ? WHERE id = ?").run(seen ? 1 : 0, row.id);
+            }
+          }
+        }
+
         const { candidates, highestUid } = await scanForShippedMessages(
           account,
           account.tracking_last_uid || 0

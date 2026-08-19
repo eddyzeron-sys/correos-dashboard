@@ -54,12 +54,10 @@ document.addEventListener("DOMContentLoaded", () => {
       apiFetch("/trackings/scan", { method: "POST" })
         .then((r) => r.json())
         .then((data) => {
-          if (data.found > 0) {
-            showToast(`Se encontraron ${data.found} tracking(s) nuevo(s)`);
-            location.reload();
-          } else {
-            showToast("No hay trackings nuevos");
-          }
+          showToast(data.found > 0 ? `Se encontraron ${data.found} tracking(s) nuevo(s)` : "No hay trackings nuevos");
+          // Recarga siempre, no solo cuando hay nuevos — el escaneo también
+          // resincroniza el leído/no leído de los que ya estaban guardados.
+          location.reload();
         })
         .catch((err) => {
           if (err.message !== "unauthenticated") showToast("No se pudo buscar trackings.");

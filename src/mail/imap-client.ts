@@ -185,6 +185,33 @@ export async function setMessageSeen(account: EmailAccountRow, uid: number, seen
   }
 }
 
+// Consulta el estado \Seen actual de un grupo de UIDs conocidos — se usa para
+// resincronizar trackings ya guardados con lo que de verdad diga el buzón
+// (ej. si se marcaron leídos desde otro cliente o antes de que existiera este
+// seguimiento). Solo pide los flags, no descarga el mensaje.
+export async function getSeenStatusForUids(
+  account: EmailAccountRow,
+  uids: number[]
+): Promise<Map<number, boolean>> {
+  const result = new Map<number, boolean>();
+  if (uids.length === 0) return result;
+  const client = clientFor(account);
+  await client.connect();
+  try {
+    const lock = await client.getMailboxLock("INBOX");
+    try {
+      for await (const msg of client.fetch(uids.join(","), { uid: true, flags: true }, { uid: true })) {
+        result.set(msg.uid, msg.flags ? msg.flags.has("\\Seen") : false);
+      }
+    } finally {
+      lock.release();
+    }
+  } finally {
+    await client.logout();
+  }
+  return result;
+}
+
 export interface ShippedCandidate {
   uid: number;
   subject: string;
