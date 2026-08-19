@@ -4,7 +4,7 @@ import { db, normalizeTagColor, MailcowServerRow, EmailAccountRow, TagRow, MAX_Q
 import { encrypt } from "../crypto";
 import { requireAuth } from "../middleware/require-auth";
 import { listDomains } from "../mailcow/domains";
-import { createMailbox, deleteMailbox } from "../mailcow/mailboxes";
+import { createMailbox, deleteMailbox, addDepopInboxFilter } from "../mailcow/mailboxes";
 import { getUnseenCount } from "../mail/imap-client";
 
 const router = Router();
@@ -160,6 +160,13 @@ router.post("/email-accounts", async (req, res) => {
       `INSERT INTO email_accounts (mailcow_server_id, user_id, domain, local_part, email, password_encrypted, quota_mb)
        VALUES (?, ?, ?, ?, ?, ?, ?)`
     ).run(server.id, req.user!.id, domain, local_part, fullEmail, encrypt(password), quota);
+    try {
+      await addDepopInboxFilter(server, fullEmail);
+    } catch (err) {
+      // No bloquea la creación del correo — solo se queda sin este filtro
+      // hasta que se agregue a mano si llega a hacer falta.
+      console.error(`No se pudo agregar el filtro de Depop a ${fullEmail}:`, err);
+    }
     res.redirect("/dashboard");
   } catch (err) {
     const rawMessage = (err as Error).message;
