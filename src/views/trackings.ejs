@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <title>Trackings</title>
+  <%- include('partials/head') %>
+</head>
+<body>
+  <div class="shell-wrap">
+    <div class="app-shell">
+      <%- include('partials/sidebar', { activeNav: 'trackings' }) %>
+      <main class="app-main">
+        <header class="topbar">
+          <div></div>
+          <div class="header-actions">
+            <button id="btn-scan-trackings" class="btn-secondary btn-icon-only" title="Buscar trackings nuevos">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 4v6h-6"></path>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <% if (error) { %>
+          <p class="error"><%= error %></p>
+        <% } %>
+
+        <div class="list" id="trackings-list">
+          <% if (!trackings.length) { %>
+            <div class="list-empty">Todavía no hay trackings detectados. Dale clic a actualizar para buscar en tus correos.</div>
+          <% } %>
+          <% trackings.forEach(function(t) { %>
+            <div class="list-row" data-id="<%= t.id %>">
+              <div class="list-avatar">📦</div>
+              <div class="list-main">
+                <div class="list-title"><%= t.subject %></div>
+                <div class="list-sub">
+                  <%= t.carrier %>: <strong><%= t.tracking_number %></strong>
+                  <span class="muted"> · de: <%= t.account_email %></span>
+                </div>
+              </div>
+              <div class="list-meta">
+                <span class="list-date"><%= t.message_date ? new Date(t.message_date).toLocaleDateString('es-HN') : '' %></span>
+                <div class="icon-actions-group">
+                  <a href="<%= t.tracking_url %>" target="_blank" rel="noopener noreferrer" class="icon-action" title="Ver rastreo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                      <polyline points="15 3 21 3 21 9"></polyline>
+                      <line x1="10" y1="14" x2="21" y2="3"></line>
+                    </svg>
+                  </a>
+                  <button type="button" class="icon-action danger-hover btn-delete-tracking" data-id="<%= t.id %>" title="Quitar de la lista">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 6h18"></path>
+                      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal de confirmación genérico -->
+  <div id="modal-confirm" class="modal hidden">
+    <div class="card">
+      <p id="confirm-message"></p>
+      <div class="row mt">
+        <button type="button" class="danger" id="confirm-yes">Sí, eliminar</button>
+        <button type="button" id="confirm-no">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Aviso flotante (toast) -->
+  <div id="toast" class="toast"></div>
+
+  <script src="/trackings.js"></script>
+</body>
+</html>

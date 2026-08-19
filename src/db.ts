@@ -63,6 +63,19 @@ db.exec(`
     color TEXT NOT NULL DEFAULT '${TAG_COLOR_ENABLED}',
     PRIMARY KEY (email_account_id, tag_id)
   );
+
+  CREATE TABLE IF NOT EXISTS trackings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email_account_id INTEGER NOT NULL REFERENCES email_accounts(id) ON DELETE CASCADE,
+    message_uid INTEGER NOT NULL,
+    subject TEXT NOT NULL,
+    carrier TEXT NOT NULL,
+    tracking_number TEXT NOT NULL,
+    tracking_url TEXT NOT NULL,
+    message_date TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (email_account_id, message_uid)
+  );
 `);
 
 function tableExists(name: string): boolean {
@@ -84,6 +97,11 @@ if (!columnExists("email_accounts", "user_id")) {
 }
 if (!columnExists("email_accounts", "tag_id")) {
   db.exec("ALTER TABLE email_accounts ADD COLUMN tag_id INTEGER REFERENCES tags(id);");
+}
+// Marca hasta qué UID de mensajes ya se buscaron trackings, para no volver a
+// revisar correos ya procesados en cada escaneo.
+if (!columnExists("email_accounts", "tracking_last_uid")) {
+  db.exec("ALTER TABLE email_accounts ADD COLUMN tracking_last_uid INTEGER NOT NULL DEFAULT 0;");
 }
 
 // Migración desde el esquema viejo de un solo admin (tabla admin_user) al
@@ -212,6 +230,19 @@ export interface EmailAccountRow {
   email: string;
   password_encrypted: string;
   quota_mb: number;
+  tracking_last_uid: number;
+  created_at: string;
+}
+
+export interface TrackingRow {
+  id: number;
+  email_account_id: number;
+  message_uid: number;
+  subject: string;
+  carrier: string;
+  tracking_number: string;
+  tracking_url: string;
+  message_date: string | null;
   created_at: string;
 }
 

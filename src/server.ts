@@ -10,6 +10,7 @@ import setupRoutes from "./routes/setup";
 import dashboardRoutes from "./routes/dashboard";
 import inboxRoutes from "./routes/inbox";
 import adminUsersRoutes from "./routes/admin-users";
+import trackingsRoutes from "./routes/trackings";
 
 const requiredEnv = ["SESSION_SECRET", "ENCRYPTION_KEY", "ADMIN_USER", "ADMIN_PASS"];
 for (const key of requiredEnv) {
@@ -54,6 +55,7 @@ app.use("/setup", setupRoutes);
 app.use(dashboardRoutes);
 app.use(inboxRoutes);
 app.use("/admin/users", adminUsersRoutes);
+app.use(trackingsRoutes);
 
 const port = Number(process.env.PORT) || 3000;
 app.listen(port, () => {

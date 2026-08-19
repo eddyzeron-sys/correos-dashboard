@@ -185,6 +185,58 @@ export async function setMessageSeen(account: EmailAccountRow, uid: number, seen
   }
 }
 
+export interface ShippedCandidate {
+  uid: number;
+  subject: string;
+  date: string | null;
+  html: string;
+}
+
+// Revisa los mensajes nuevos desde el último UID escaneado en busca de
+// notificaciones de "shipped" (envío), y devuelve su HTML para que se les
+// busque el link de rastreo aparte. sinceUid=0 revisa todo el buzón.
+export async function scanForShippedMessages(
+  account: EmailAccountRow,
+  sinceUid: number
+): Promise<{ candidates: ShippedCandidate[]; highestUid: number }> {
+  const client = clientFor(account);
+  await client.connect();
+  try {
+    const lock = await client.getMailboxLock("INBOX");
+    try {
+      let highestUid = sinceUid;
+      const matches: { uid: number; subject: string; date: string | null }[] = [];
+      const range = `${sinceUid + 1}:*`;
+      for await (const msg of client.fetch(range, { envelope: true, uid: true }, { uid: true })) {
+        if (msg.uid > highestUid) highestUid = msg.uid;
+        const subject = msg.envelope?.subject || "";
+        if (/shipped/i.test(subject)) {
+          matches.push({
+            uid: msg.uid,
+            subject,
+            date: msg.envelope?.date ? new Date(msg.envelope.date).toISOString() : null,
+          });
+        }
+      }
+
+      const candidates: ShippedCandidate[] = [];
+      for (const match of matches) {
+        const raw = await client.download(String(match.uid), undefined, { uid: true });
+        if (!raw) continue;
+        const parsed = await simpleParser(raw.content);
+        if (parsed.html) {
+          candidates.push({ ...match, html: parsed.html });
+        }
+      }
+      return { candidates, highestUid };
+    } finally {
+      lock.release();
+    }
+  } finally {
+    await client.logout();
+  }
+}
+
 export async function deleteMessage(account: EmailAccountRow, uid: number): Promise<void> {
   const client = clientFor(account);
   await client.connect();
