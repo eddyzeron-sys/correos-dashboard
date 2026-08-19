@@ -74,7 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".btn-copy-tracking").forEach((btn) => {
     btn.addEventListener("click", () => {
       const tracking = btn.dataset.tracking;
-      const done = () => showToast("Tracking copiado: " + tracking);
+      const done = () => showToast("Copiado: " + tracking);
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(tracking).then(done).catch(() => fallbackCopy(tracking, done));
       } else {

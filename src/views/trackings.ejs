@@ -35,7 +35,7 @@
               <div class="list-main">
                 <div class="list-title"><%= t.subject %></div>
                 <div class="list-sub">
-                  <button type="button" class="btn-copy-tracking" data-tracking="<%= t.tracking_number %>">
+                  <button type="button" class="btn-copy-tracking" data-tracking="<%= t.carrier %> Tracking <%= t.tracking_number %>">
                     <%= t.carrier %> tracking: <%= t.tracking_number %>
                   </button>
                   <span class="muted"> · de: <%= t.account_email %></span>
