@@ -71,6 +71,34 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  document.querySelectorAll(".btn-copy-tracking").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const tracking = btn.dataset.tracking;
+      const done = () => showToast("Tracking copiado: " + tracking);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(tracking).then(done).catch(() => fallbackCopy(tracking, done));
+      } else {
+        fallbackCopy(tracking, done);
+      }
+    });
+  });
+
+  function fallbackCopy(text, done) {
+    const el = document.createElement("textarea");
+    el.value = text;
+    el.style.position = "fixed";
+    el.style.opacity = "0";
+    document.body.appendChild(el);
+    el.select();
+    try {
+      document.execCommand("copy");
+      done();
+    } catch (e) {
+      // no-op
+    }
+    document.body.removeChild(el);
+  }
+
   document.querySelectorAll(".btn-delete-tracking").forEach((btn) => {
     btn.addEventListener("click", () => {
       showConfirm("¿Quitar este tracking de la lista?", () => {

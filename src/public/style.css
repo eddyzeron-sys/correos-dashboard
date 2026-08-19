@@ -241,6 +241,8 @@ button.link:hover { background: none; color: var(--accent-dark); }
   font-weight: 500;
 }
 
+.inbox-account-label { font-size: 0.78rem; margin: 0 0 6px; }
+
 .topbar {
   display: flex;
   justify-content: space-between;
@@ -330,6 +332,20 @@ button.link:hover { background: none; color: var(--accent-dark); }
   white-space: nowrap;
   margin-top: 2px;
 }
+
+.btn-copy-tracking {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  min-height: auto;
+  border-radius: 999px;
+  background: var(--accent-light);
+  color: var(--accent-dark);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.btn-copy-tracking:hover { background: var(--accent); color: #fff; }
 
 .list-meta {
   display: flex;
