@@ -99,6 +99,28 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.removeChild(el);
   }
 
+  document.querySelectorAll(".btn-toggle-seen").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const row = btn.closest(".list-row");
+      const id = row.dataset.id;
+      const newSeen = btn.dataset.seen === "1" ? "0" : "1";
+      apiFetch(`/trackings/${id}/seen`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `seen=${newSeen}`,
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          btn.dataset.seen = newSeen;
+          btn.title = data.seen ? "Marcar como no leído" : "Marcar como leído";
+          row.classList.toggle("unread", !data.seen);
+        })
+        .catch((err) => {
+          if (err.message !== "unauthenticated") showToast("No se pudo actualizar.");
+        });
+    });
+  });
+
   document.querySelectorAll(".btn-delete-tracking").forEach((btn) => {
     btn.addEventListener("click", () => {
       showConfirm("¿Quitar este tracking de la lista?", () => {

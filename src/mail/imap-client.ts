@@ -189,6 +189,7 @@ export interface ShippedCandidate {
   uid: number;
   subject: string;
   date: string | null;
+  seen: boolean;
   html: string;
 }
 
@@ -205,9 +206,9 @@ export async function scanForShippedMessages(
     const lock = await client.getMailboxLock("INBOX");
     try {
       let highestUid = sinceUid;
-      const matches: { uid: number; subject: string; date: string | null }[] = [];
+      const matches: { uid: number; subject: string; date: string | null; seen: boolean }[] = [];
       const range = `${sinceUid + 1}:*`;
-      for await (const msg of client.fetch(range, { envelope: true, uid: true }, { uid: true })) {
+      for await (const msg of client.fetch(range, { envelope: true, uid: true, flags: true }, { uid: true })) {
         if (msg.uid > highestUid) highestUid = msg.uid;
         const subject = msg.envelope?.subject || "";
         if (/shipped/i.test(subject)) {
@@ -215,6 +216,7 @@ export async function scanForShippedMessages(
             uid: msg.uid,
             subject,
             date: msg.envelope?.date ? new Date(msg.envelope.date).toISOString() : null,
+            seen: msg.flags ? msg.flags.has("\\Seen") : false,
           });
         }
       }

@@ -75,6 +75,7 @@ db.exec(`
     tracking_number TEXT NOT NULL,
     tracking_url TEXT NOT NULL,
     message_date TEXT,
+    seen INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE (email_account_id, message_uid)
   );
@@ -207,6 +208,12 @@ function migrateTrackingsOwnership(): void {
 }
 migrateTrackingsOwnership();
 
+// Estado de leído/no leído del tracking, sincronizado con el \Seen real del
+// correo (ver src/routes/inbox.ts y src/routes/trackings.ts).
+if (tableExists("trackings") && !columnExists("trackings", "seen")) {
+  db.exec("ALTER TABLE trackings ADD COLUMN seen INTEGER NOT NULL DEFAULT 0;");
+}
+
 // Cualquier usuario ya existente que todavía no tenga etiquetas (por ejemplo
 // el admin de antes de que existiera esta función) recibe las de ejemplo.
 function backfillDefaultTags(): void {
@@ -284,6 +291,7 @@ export interface TrackingRow {
   tracking_number: string;
   tracking_url: string;
   message_date: string | null;
+  seen: number;
   created_at: string;
 }
 

@@ -54,6 +54,14 @@ router.get("/inbox/:id/message/:uid", async (req, res) => {
     return;
   }
   const message = await getMessage(emailAccount, Number(req.params.uid));
+  if (message) {
+    // Abrir el correo lo marca leído por IMAP — si tiene un tracking asociado
+    // (menú Trackings), se refleja ahí también.
+    db.prepare("UPDATE trackings SET seen = 1 WHERE email_account_id = ? AND message_uid = ?").run(
+      emailAccount.id,
+      message.uid
+    );
+  }
   res.render("message", { emailAccount, message });
 });
 
@@ -87,7 +95,13 @@ router.post("/inbox/:id/message/:uid/seen", async (req, res) => {
     return;
   }
   const seen = (req.body as Record<string, string>).seen === "1";
-  await setMessageSeen(emailAccount, Number(req.params.uid), seen);
+  const uid = Number(req.params.uid);
+  await setMessageSeen(emailAccount, uid, seen);
+  db.prepare("UPDATE trackings SET seen = ? WHERE email_account_id = ? AND message_uid = ?").run(
+    seen ? 1 : 0,
+    emailAccount.id,
+    uid
+  );
   res.json({ ok: true, seen });
 });
 

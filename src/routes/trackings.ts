@@ -1,7 +1,7 @@
 import { Router, Request } from "express";
 import { db, EmailAccountRow, TrackingRow } from "../db";
 import { requireAuth } from "../middleware/require-auth";
-import { scanForShippedMessages } from "../mail/imap-client";
+import { scanForShippedMessages, setMessageSeen } from "../mail/imap-client";
 import { extractCandidateLinks, findTrackingInLinks } from "../mail/tracking-links";
 
 const router = Router();
@@ -47,8 +47,8 @@ router.post("/trackings/scan", async (req, res) => {
           if (tracking) {
             db.prepare(
               `INSERT OR IGNORE INTO trackings
-                 (user_id, email_account_id, account_email, message_uid, subject, carrier, tracking_number, tracking_url, message_date)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                 (user_id, email_account_id, account_email, message_uid, subject, carrier, tracking_number, tracking_url, message_date, seen)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
             ).run(
               account.user_id,
               account.id,
@@ -58,7 +58,8 @@ router.post("/trackings/scan", async (req, res) => {
               tracking.carrier,
               tracking.trackingNumber,
               tracking.url,
-              candidate.date
+              candidate.date,
+              candidate.seen ? 1 : 0
             );
             found++;
           }
@@ -75,6 +76,38 @@ router.post("/trackings/scan", async (req, res) => {
     })
   );
   res.json({ found: results.reduce((a, b) => a + b, 0) });
+});
+
+// Marca leído/no leído el tracking, y si la cuenta de correo todavía existe
+// también cambia el \Seen real del mensaje — para que quede igual en los dos
+// lados sin importar por cuál se haga el cambio.
+router.post("/trackings/:id/seen", async (req, res) => {
+  const scope = req.user!.role === "admin" ? "" : "AND user_id = ?";
+  const params = req.user!.role === "admin" ? [req.params.id] : [req.params.id, req.user!.id];
+  const tracking = db
+    .prepare(`SELECT * FROM trackings WHERE id = ? ${scope}`)
+    .get(...params) as TrackingRow | undefined;
+  if (!tracking) {
+    res.status(404).json({ error: "No encontrado" });
+    return;
+  }
+  const seen = (req.body as Record<string, string>).seen === "1";
+  db.prepare("UPDATE trackings SET seen = ? WHERE id = ?").run(seen ? 1 : 0, tracking.id);
+
+  if (tracking.email_account_id) {
+    const account = db
+      .prepare("SELECT * FROM email_accounts WHERE id = ?")
+      .get(tracking.email_account_id) as EmailAccountRow | undefined;
+    if (account) {
+      try {
+        await setMessageSeen(account, tracking.message_uid, seen);
+      } catch (err) {
+        console.error(`No se pudo sincronizar el estado leído en ${account.email}:`, err);
+      }
+    }
+  }
+
+  res.json({ ok: true, seen });
 });
 
 router.post("/trackings/:id/delete", (req, res) => {

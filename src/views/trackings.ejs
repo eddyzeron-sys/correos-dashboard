@@ -30,7 +30,7 @@
             <div class="list-empty">Todavía no hay trackings detectados. Dale clic a actualizar para buscar en tus correos.</div>
           <% } %>
           <% trackings.forEach(function(t) { %>
-            <div class="list-row" data-id="<%= t.id %>">
+            <div class="list-row <%= t.seen ? '' : 'unread' %>" data-id="<%= t.id %>">
               <div class="list-avatar">📦</div>
               <div class="list-main">
                 <div class="list-title"><%= t.subject %></div>
@@ -47,6 +47,12 @@
               <div class="list-meta">
                 <span class="list-date"><%= t.message_date ? new Date(t.message_date).toLocaleDateString('es-HN') : '' %></span>
                 <div class="icon-actions-group">
+                  <button type="button" class="icon-action btn-toggle-seen" data-seen="<%= t.seen ? '1' : '0' %>"
+                          title="<%= t.seen ? 'Marcar como no leído' : 'Marcar como leído' %>">
+                    <svg class="icon-seen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="6"></circle>
+                    </svg>
+                  </button>
                   <a href="<%= t.tracking_url %>" target="_blank" rel="noopener noreferrer" class="icon-action" title="Ver rastreo">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
