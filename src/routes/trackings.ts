@@ -16,20 +16,15 @@ function listOwnedAccounts(req: Request): EmailAccountRow[] {
     .all(req.user!.id) as unknown as EmailAccountRow[];
 }
 
-type TrackingWithEmail = TrackingRow & { account_email: string };
-
-function listTrackingsFor(req: Request): TrackingWithEmail[] {
-  const accounts = listOwnedAccounts(req);
-  if (accounts.length === 0) return [];
-  const placeholders = accounts.map(() => "?").join(",");
+// Los trackings guardan su propio dueño y su propia copia del correo, así que
+// no dependen de que la cuenta de correo siga existiendo para listarse.
+function listTrackingsFor(req: Request): TrackingRow[] {
+  if (req.user!.role === "admin") {
+    return db.prepare("SELECT * FROM trackings ORDER BY created_at DESC").all() as unknown as TrackingRow[];
+  }
   return db
-    .prepare(
-      `SELECT t.*, e.email as account_email FROM trackings t
-       JOIN email_accounts e ON e.id = t.email_account_id
-       WHERE t.email_account_id IN (${placeholders})
-       ORDER BY t.created_at DESC`
-    )
-    .all(...accounts.map((a) => a.id)) as unknown as TrackingWithEmail[];
+    .prepare("SELECT * FROM trackings WHERE user_id = ? ORDER BY created_at DESC")
+    .all(req.user!.id) as unknown as TrackingRow[];
 }
 
 router.get("/trackings", (req, res) => {
@@ -52,10 +47,12 @@ router.post("/trackings/scan", async (req, res) => {
           if (tracking) {
             db.prepare(
               `INSERT OR IGNORE INTO trackings
-                 (email_account_id, message_uid, subject, carrier, tracking_number, tracking_url, message_date)
-               VALUES (?, ?, ?, ?, ?, ?, ?)`
+                 (user_id, email_account_id, account_email, message_uid, subject, carrier, tracking_number, tracking_url, message_date)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
             ).run(
+              account.user_id,
               account.id,
+              account.email,
               candidate.uid,
               candidate.subject,
               tracking.carrier,
@@ -81,16 +78,11 @@ router.post("/trackings/scan", async (req, res) => {
 });
 
 router.post("/trackings/:id/delete", (req, res) => {
-  const accountIds = listOwnedAccounts(req).map((a) => a.id);
-  if (accountIds.length === 0) {
-    res.status(404).json({ error: "No encontrado" });
-    return;
+  if (req.user!.role === "admin") {
+    db.prepare("DELETE FROM trackings WHERE id = ?").run(req.params.id);
+  } else {
+    db.prepare("DELETE FROM trackings WHERE id = ? AND user_id = ?").run(req.params.id, req.user!.id);
   }
-  const placeholders = accountIds.map(() => "?").join(",");
-  db.prepare(`DELETE FROM trackings WHERE id = ? AND email_account_id IN (${placeholders})`).run(
-    req.params.id,
-    ...accountIds
-  );
   res.json({ ok: true });
 });
 

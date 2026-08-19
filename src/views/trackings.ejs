@@ -39,6 +39,9 @@
                     <%= t.carrier %> tracking: <%= t.tracking_number %>
                   </button>
                   <span class="muted"> · de: <%= t.account_email %></span>
+                  <% if (!t.email_account_id) { %>
+                    <span class="tag-pill" style="background:#6b7280">Cuenta eliminada</span>
+                  <% } %>
                 </div>
               </div>
               <div class="list-meta">

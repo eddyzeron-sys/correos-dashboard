@@ -66,7 +66,9 @@ db.exec(`
 
   CREATE TABLE IF NOT EXISTS trackings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email_account_id INTEGER NOT NULL REFERENCES email_accounts(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    email_account_id INTEGER REFERENCES email_accounts(id) ON DELETE SET NULL,
+    account_email TEXT NOT NULL,
     message_uid INTEGER NOT NULL,
     subject TEXT NOT NULL,
     carrier TEXT NOT NULL,
@@ -168,6 +170,43 @@ function migrateTagColorToAttachment(): void {
 }
 migrateTagColorToAttachment();
 
+// Los trackings ahora guardan su propio dueño (user_id) y una copia del
+// correo (account_email), en vez de depender solo de email_account_id — así
+// sobreviven si se borra la cuenta de correo (antes se borraban en cascada).
+// Se recrea la tabla porque SQLite no deja cambiar la regla ON DELETE de una
+// columna existente.
+function migrateTrackingsOwnership(): void {
+  if (!tableExists("trackings") || columnExists("trackings", "user_id")) return;
+
+  db.exec(`
+    CREATE TABLE trackings_new (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      email_account_id INTEGER REFERENCES email_accounts(id) ON DELETE SET NULL,
+      account_email TEXT NOT NULL,
+      message_uid INTEGER NOT NULL,
+      subject TEXT NOT NULL,
+      carrier TEXT NOT NULL,
+      tracking_number TEXT NOT NULL,
+      tracking_url TEXT NOT NULL,
+      message_date TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE (email_account_id, message_uid)
+    );
+  `);
+  db.exec(`
+    INSERT INTO trackings_new
+      (id, user_id, email_account_id, account_email, message_uid, subject, carrier, tracking_number, tracking_url, message_date, created_at)
+    SELECT t.id, e.user_id, t.email_account_id, e.email, t.message_uid, t.subject, t.carrier, t.tracking_number, t.tracking_url, t.message_date, t.created_at
+    FROM trackings t
+    JOIN email_accounts e ON e.id = t.email_account_id
+    WHERE e.user_id IS NOT NULL;
+  `);
+  db.exec(`DROP TABLE trackings;`);
+  db.exec(`ALTER TABLE trackings_new RENAME TO trackings;`);
+}
+migrateTrackingsOwnership();
+
 // Cualquier usuario ya existente que todavía no tenga etiquetas (por ejemplo
 // el admin de antes de que existiera esta función) recibe las de ejemplo.
 function backfillDefaultTags(): void {
@@ -236,7 +275,9 @@ export interface EmailAccountRow {
 
 export interface TrackingRow {
   id: number;
-  email_account_id: number;
+  user_id: number;
+  email_account_id: number | null;
+  account_email: string;
   message_uid: number;
   subject: string;
   carrier: string;
