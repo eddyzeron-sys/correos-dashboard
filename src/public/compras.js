@@ -552,6 +552,7 @@ document.addEventListener("DOMContentLoaded", () => {
               if (list && !list.querySelector(".compra-tarjeta-card")) {
                 list.innerHTML = '<div class="list-empty">Todavía no has guardado ninguna tarjeta para este correo.</div>';
               }
+              currentTarjetas = currentTarjetas.filter((t) => t.id !== Number(btn.dataset.id));
               showToast("Tarjeta eliminada");
             })
             .catch((err) => {
@@ -712,6 +713,10 @@ document.addEventListener("DOMContentLoaded", () => {
             list.insertAdjacentHTML("afterbegin", tarjetaCardHtml(data));
             wireTarjetaCardButtons();
           }
+          // Sin esto, la tarjeta recién creada aquí no aparecía en el
+          // selector "Tarjeta usada" del modal de compra hasta refrescar
+          // la página (currentTarjetas se quedaba desactualizado).
+          currentTarjetas.unshift(data);
           showToast("Tarjeta guardada");
         })
         .catch((err) => {
@@ -741,6 +746,8 @@ document.addEventListener("DOMContentLoaded", () => {
           const card = comprasPanel.querySelector('.compra-tarjeta-card[data-id="' + id + '"]');
           if (card) card.outerHTML = tarjetaCardHtml(data);
           wireTarjetaCardButtons();
+          const cached = currentTarjetas.find((t) => t.id === Number(id));
+          if (cached) cached.tarjeta = data.tarjeta;
           showToast("Tarjeta actualizada");
         })
         .catch((err) => {
