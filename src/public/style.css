@@ -582,7 +582,6 @@ button.link:hover { background: none; color: var(--accent-dark); }
 .compra-monto-group-header span { font-size: 0.78rem; font-weight: 700; }
 .compra-monto-row { margin-top: 6px; }
 .compra-monto-row:first-child { margin-top: 0; }
-.compra-monto-group button.link { font-size: 0.78rem; margin-top: 8px; }
 
 .compra-registro-card {
   position: relative;
@@ -594,6 +593,18 @@ button.link:hover { background: none; color: var(--accent-dark); }
   transition: border-color 0.15s ease;
 }
 .compra-registro-card:hover { border-color: var(--accent); }
+.compra-enviado-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #e7f7ee;
+  color: #16a34a;
+  font-size: 0.66rem;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 999px;
+  margin-bottom: 6px;
+}
 .compra-registro-top { margin-bottom: 5px; font-size: 0.72rem; }
 .compra-registro-descripcion { font-weight: 700; font-size: 0.78rem; margin-bottom: 5px; }
 .compra-tiendas-lines { display: flex; flex-direction: column; gap: 2px; margin-bottom: 5px; }
@@ -788,6 +799,22 @@ tr:hover td { background: var(--surface-muted); }
   width: 32px;
   height: 32px;
 }
+
+/* Modal con header y footer fijos (no se van al hacer scroll del contenido
+   largo del medio) — usado por el modal de Agregar/editar compra. */
+.modal .modal-card-flex { display: flex; flex-direction: column; overflow: hidden; }
+.modal-card-flex .modal-card-header { flex-shrink: 0; }
+.modal-card-header-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.modal-card-header-row h2 { margin: 0; }
+.modal-card-header-row .modal-close-btn { position: static; flex-shrink: 0; }
+.modal-card-flex .modal-card-body { flex: 1; overflow-y: auto; min-height: 0; margin: 0 -8px; padding: 0 8px; }
+.modal-card-flex .modal-card-footer {
+  flex-shrink: 0;
+  padding-top: 14px;
+  margin-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.modal-card-footer button.primary { margin-top: 0; }
 .modal-close-btn svg { width: 16px; height: 16px; }
 
 .pager { display: flex; justify-content: space-between; margin-top: 18px; gap: 12px; }
