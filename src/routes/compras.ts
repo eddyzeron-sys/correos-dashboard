@@ -32,6 +32,7 @@ function getOwnTag(req: Request, id: string): { id: number } | undefined {
 type RegistroWithTag = {
   id: number;
   compra_email_id: number;
+  correo: string;
   tarjeta: string | null;
   monto: number | null;
   created_at: string;
@@ -111,7 +112,7 @@ router.get("/compras/emails/:id/registros", (req, res) => {
   }
   const registros = db
     .prepare(
-      `SELECT r.id, r.compra_email_id, r.tarjeta, r.monto, r.created_at, r.tag_id, t.name as tag_name
+      `SELECT r.id, r.compra_email_id, r.correo, r.tarjeta, r.monto, r.created_at, r.tag_id, t.name as tag_name
        FROM compra_registros r
        LEFT JOIN compra_tags t ON t.id = r.tag_id
        WHERE r.compra_email_id = ?
@@ -128,25 +129,30 @@ router.post("/compras/registros", (req, res) => {
     res.status(400).json({ error: "Correo inválido." });
     return;
   }
+  const correo = (body.correo || "").trim();
+  if (!correo) {
+    res.status(400).json({ error: "El correo es obligatorio." });
+    return;
+  }
+  // La tienda (etiqueta) se elige primero — sin eso no se guarda el gasto.
+  const tag = body.tag_id ? getOwnTag(req, body.tag_id) : undefined;
+  if (!tag) {
+    res.status(400).json({ error: "Elige primero la tienda (etiqueta)." });
+    return;
+  }
   const tarjeta = (body.tarjeta || "").trim() || null;
   const montoNum = body.monto ? Number(body.monto) : null;
   const monto = montoNum !== null && !Number.isNaN(montoNum) ? montoNum : null;
 
-  let tagId: number | null = null;
-  if (body.tag_id) {
-    const tag = getOwnTag(req, body.tag_id);
-    tagId = tag ? tag.id : null;
-  }
-
   const info = db
     .prepare(
-      "INSERT INTO compra_registros (user_id, compra_email_id, tarjeta, tag_id, monto) VALUES (?, ?, ?, ?, ?)"
+      "INSERT INTO compra_registros (user_id, compra_email_id, correo, tarjeta, tag_id, monto) VALUES (?, ?, ?, ?, ?, ?)"
     )
-    .run(req.user!.id, email.id, tarjeta, tagId, monto);
+    .run(req.user!.id, email.id, correo, tarjeta, tag.id, monto);
 
   const registro = db
     .prepare(
-      `SELECT r.id, r.compra_email_id, r.tarjeta, r.monto, r.created_at, r.tag_id, t.name as tag_name
+      `SELECT r.id, r.compra_email_id, r.correo, r.tarjeta, r.monto, r.created_at, r.tag_id, t.name as tag_name
        FROM compra_registros r
        LEFT JOIN compra_tags t ON t.id = r.tag_id
        WHERE r.id = ?`

@@ -99,6 +99,7 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     compra_email_id INTEGER NOT NULL REFERENCES compra_emails(id) ON DELETE CASCADE,
+    correo TEXT NOT NULL DEFAULT '',
     tarjeta TEXT,
     tag_id INTEGER REFERENCES compra_tags(id) ON DELETE SET NULL,
     monto REAL,
@@ -239,6 +240,16 @@ if (tableExists("trackings") && !columnExists("trackings", "seen")) {
   db.exec("ALTER TABLE trackings ADD COLUMN seen INTEGER NOT NULL DEFAULT 0;");
 }
 
+// El registro de compra tiene su propio campo de correo (puede ser distinto
+// al de la libreta bajo la que está guardado) — las filas viejas heredan el
+// correo de su libreta como valor inicial.
+if (tableExists("compra_registros") && !columnExists("compra_registros", "correo")) {
+  db.exec("ALTER TABLE compra_registros ADD COLUMN correo TEXT NOT NULL DEFAULT '';");
+  db.exec(
+    `UPDATE compra_registros SET correo = (SELECT email FROM compra_emails WHERE compra_emails.id = compra_registros.compra_email_id) WHERE correo = ''`
+  );
+}
+
 // Cualquier usuario ya existente que todavía no tenga etiquetas (por ejemplo
 // el admin de antes de que existiera esta función) recibe las de ejemplo.
 function backfillDefaultTags(): void {
@@ -338,6 +349,7 @@ export interface CompraRegistroRow {
   id: number;
   user_id: number;
   compra_email_id: number;
+  correo: string;
   tarjeta: string | null;
   tag_id: number | null;
   monto: number | null;

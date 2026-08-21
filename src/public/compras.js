@@ -153,9 +153,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const comprasPanel = document.getElementById("compras-panel");
   const modalAddCompra = document.getElementById("modal-add-compra");
   const formAddCompra = document.getElementById("form-add-compra");
-  const addCompraEmailLabel = document.getElementById("add-compra-email-label");
+  const compraCorreoField = document.getElementById("compra-correo-field");
   const compraTarjetaField = document.getElementById("compra-tarjeta-field");
   const compraMontoField = document.getElementById("compra-monto-field");
+  const compraMontoHint = document.getElementById("compra-monto-hint");
   const compraTagsChecklist = document.getElementById("compra-tags-checklist");
   const newCompraTagName = document.getElementById("new-compra-tag-name");
   const btnAddCompraTag = document.getElementById("btn-add-compra-tag");
@@ -187,7 +188,7 @@ document.addEventListener("DOMContentLoaded", () => {
       money(r.monto) +
       "</span></div>" +
       '<div><span class="field-label">Correo</span><span class="field-value">' +
-      escapeHtml(selectedEmailText || "") +
+      escapeHtml(r.correo || "") +
       "</span></div>" +
       "</div>"
     );
@@ -256,12 +257,21 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // ---------- Modal "Agregar compra" ----------
+  // El monto no se puede tocar hasta elegir la tienda (etiqueta) primero.
+  function updateMontoLock() {
+    const hasTag = !!compraTagsChecklist.querySelector(".tag-card.selected");
+    compraMontoField.disabled = !hasTag;
+    if (compraMontoHint) compraMontoHint.style.display = hasTag ? "none" : "";
+    if (!hasTag) compraMontoField.value = "";
+  }
+
   function openAddCompraModal() {
-    addCompraEmailLabel.textContent = "— " + selectedEmailText;
+    compraCorreoField.value = selectedEmailText || "";
     compraTarjetaField.value = "";
     compraMontoField.value = "";
     newCompraTagName.value = "";
     compraTagsChecklist.querySelectorAll(".tag-card").forEach((c) => c.classList.remove("selected"));
+    updateMontoLock();
     modalAddCompra.classList.remove("hidden");
   }
 
@@ -271,6 +281,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const alreadySelected = card.classList.contains("selected");
     compraTagsChecklist.querySelectorAll(".tag-card").forEach((c) => c.classList.remove("selected"));
     if (!alreadySelected) card.classList.add("selected");
+    updateMontoLock();
   });
 
   if (btnAddCompraTag) {
@@ -301,6 +312,7 @@ document.addEventListener("DOMContentLoaded", () => {
               "</span></div>"
           );
           newCompraTagName.value = "";
+          updateMontoLock();
         })
         .catch((err) => {
           if (err.message !== "unauthenticated") showToast("No se pudo crear la etiqueta.");
@@ -313,11 +325,21 @@ document.addEventListener("DOMContentLoaded", () => {
       e.preventDefault();
       if (!selectedEmailId) return;
       const selectedTag = compraTagsChecklist.querySelector(".tag-card.selected");
+      if (!selectedTag) {
+        showToast("Elige primero la tienda (etiqueta).");
+        return;
+      }
+      const correo = compraCorreoField.value.trim();
+      if (!correo) {
+        compraCorreoField.focus();
+        return;
+      }
       const body = new URLSearchParams({
         compra_email_id: selectedEmailId,
+        correo,
         tarjeta: compraTarjetaField.value.trim(),
         monto: compraMontoField.value,
-        tag_id: selectedTag ? selectedTag.dataset.tagId : "",
+        tag_id: selectedTag.dataset.tagId,
       });
       apiFetch("/compras/registros", { method: "POST", body })
         .then((r) => r.json())
