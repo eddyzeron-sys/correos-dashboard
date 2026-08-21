@@ -289,6 +289,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!hasTag) input.value = "";
     });
     if (compraMontoHint) compraMontoHint.style.display = hasTag ? "none" : "";
+    updateMontoTotal();
   }
 
   function montoRowHtml() {
@@ -308,24 +309,51 @@ document.addEventListener("DOMContentLoaded", () => {
       '<div class="row compra-monto-row">' +
       '<span class="muted" style="font-weight:700;">$</span>' +
       '<input type="number" class="compra-monto-input" step="0.01" min="0" placeholder="0.00" disabled />' +
-      '<button type="button" class="icon-action btn-add-monto" title="Registrar otra compra con estos mismos datos">' +
+      '<button type="button" class="icon-action btn-add-monto" title="Sumar otra cantidad al total">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
       '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>' +
       "</div>";
+    updateMontoTotal();
   }
 
-  // Clic en "+" agrega otra fila de cantidad (misma tienda/correo/tarjeta,
-  // se guarda como otra compra aparte). Clic en la "x" de una fila la quita.
+  function sumMontos() {
+    const values = Array.from(compraMontosList.querySelectorAll(".compra-monto-input"))
+      .map((i) => parseFloat(i.value))
+      .filter((v) => !Number.isNaN(v));
+    return values.length ? values.reduce((a, b) => a + b, 0) : null;
+  }
+
+  const compraMontoTotal = document.getElementById("compra-monto-total");
+  function updateMontoTotal() {
+    if (!compraMontoTotal) return;
+    const rows = compraMontosList.querySelectorAll(".compra-monto-row").length;
+    const total = sumMontos();
+    if (rows > 1 && total !== null) {
+      compraMontoTotal.textContent = "Total: $" + total.toFixed(2);
+      compraMontoTotal.style.display = "";
+    } else {
+      compraMontoTotal.style.display = "none";
+    }
+  }
+
+  // Clic en "+" agrega otra fila de cantidad — todas suman al monto de esta
+  // misma compra (una sola tarjeta), no crean compras separadas. La "x" de
+  // una fila la quita de la suma.
   compraMontosList.addEventListener("click", (e) => {
     if (e.target.closest(".btn-add-monto")) {
       compraMontosList.insertAdjacentHTML("beforeend", montoRowHtml());
       if (compraMontoMultiHint) compraMontoMultiHint.style.display = "";
+      updateMontoTotal();
       return;
     }
     const removeBtn = e.target.closest(".btn-remove-monto");
     if (removeBtn) {
       removeBtn.closest(".compra-monto-row").remove();
+      updateMontoTotal();
     }
+  });
+  compraMontosList.addEventListener("input", (e) => {
+    if (e.target.classList.contains("compra-monto-input")) updateMontoTotal();
   });
 
   // existing === null → modo agregar. existing === {id, tag_id, tarjeta, monto, correo} → modo editar.
@@ -333,7 +361,7 @@ document.addEventListener("DOMContentLoaded", () => {
     editingRegistroId = existing ? existing.id : null;
     modalTitle.textContent = existing ? "Editar compra" : "Agregar compra";
     btnSubmitCompra.textContent = existing ? "Guardar cambios" : "Guardar compra";
-    compraCorreoField.value = existing ? existing.correo : selectedEmailText || "";
+    compraCorreoField.value = existing ? existing.correo : "";
     compraTarjetaField.value = existing ? existing.tarjeta : "";
     newCompraTagName.value = "";
     compraTagsChecklist.querySelectorAll(".tag-card").forEach((c) => {
@@ -459,28 +487,20 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      // Modo crear: una fila por cada cantidad que se haya llenado (todas con
-      // la misma tienda/correo/tarjeta) — si no se llenó ninguna, se guarda
-      // una sola compra sin monto, igual que antes.
-      const montoValues = Array.from(compraMontosList.querySelectorAll(".compra-monto-input"))
-        .map((i) => i.value)
-        .filter((v) => v !== "");
-      const montosToCreate = montoValues.length ? montoValues : [null];
-
-      Promise.all(montosToCreate.map((m) => postRegistro(selectedEmailId, correo, tarjeta, tagId, m)))
-        .then((results) => {
-          const errored = results.find((r) => r.error);
-          if (errored) {
-            showToast(errored.error);
+      // Modo crear: una sola compra — si se agregaron varias cantidades con
+      // el "+", se suman en un solo monto (misma tienda/correo/tarjeta).
+      const monto = sumMontos();
+      postRegistro(selectedEmailId, correo, tarjeta, tagId, monto)
+        .then((data) => {
+          if (data.error) {
+            showToast(data.error);
             return;
           }
           modalAddCompra.classList.add("hidden");
-          results.forEach((r) => insertRegistroCard(r.registro));
+          insertRegistroCard(data.registro);
           wireRegistroDeleteButtons();
           wireRegistroCardClicks();
-          showToast(
-            results.length > 1 ? `${results.length} compras agregadas` : "Compra agregada"
-          );
+          showToast("Compra agregada");
         })
         .catch((err) => {
           if (err.message !== "unauthenticated") showToast("No se pudo guardar la compra.");

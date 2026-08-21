@@ -136,7 +136,7 @@
         <div class="row compra-monto-row">
           <span class="muted" style="font-weight:700;">$</span>
           <input type="number" class="compra-monto-input" step="0.01" min="0" placeholder="0.00" disabled />
-          <button type="button" class="icon-action btn-add-monto" title="Registrar otra compra con estos mismos datos">
+          <button type="button" class="icon-action btn-add-monto" title="Sumar otra cantidad al total">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -145,7 +145,8 @@
         </div>
       </div>
       <p class="muted field-hint" id="compra-monto-hint">Elige una tienda arriba para poder poner el gasto.</p>
-      <p class="muted field-hint" id="compra-monto-multi-hint" style="display:none;">El "+" agrega otra cantidad — se guarda como otra compra con la misma tienda, correo y tarjeta.</p>
+      <p class="muted field-hint" id="compra-monto-multi-hint" style="display:none;">El "+" suma otra cantidad al total de esta misma compra (una sola tarjeta).</p>
+      <p class="muted field-hint" id="compra-monto-total" style="display:none;"></p>
 
       <div class="row mt">
         <button type="submit" class="primary" id="btn-submit-compra">Guardar compra</button>
