@@ -54,11 +54,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const editEmailField = document.getElementById("edit-email-field");
   const formEditEmail = document.getElementById("form-edit-email");
 
+  // Cierra el modal que contiene al botón, sea cual sea — así los modales
+  // nuevos no necesitan que se les agregue aquí a mano (bug ya visto antes).
   document.querySelectorAll(".btn-cancel").forEach((btn) => {
     btn.addEventListener("click", () => {
-      modalAdd.classList.add("hidden");
-      modalEdit.classList.add("hidden");
-      document.getElementById("modal-add-compra").classList.add("hidden");
+      const modal = btn.closest(".modal");
+      if (modal) modal.classList.add("hidden");
     });
   });
 
@@ -149,6 +150,143 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
   });
+
+  // ---------- Pestañas de página: Registro de compras / Mis tarjetas ----------
+  const pageTabBtns = document.querySelectorAll(".page-tab-btn");
+  const pageTabPanels = document.querySelectorAll(".page-tab-panel");
+  pageTabBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      pageTabBtns.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      pageTabPanels.forEach((p) => p.classList.toggle("hidden", p.dataset.pageTabPanel !== btn.dataset.pageTab));
+    });
+  });
+
+  // ---------- "Mis tarjetas" (libreta de tarjetas guardadas) ----------
+  const modalAddTarjeta = document.getElementById("modal-add-tarjeta");
+  const modalEditTarjeta = document.getElementById("modal-edit-tarjeta");
+  const btnAddTarjeta = document.getElementById("btn-add-tarjeta");
+  const addTarjetaField = document.getElementById("add-tarjeta-field");
+  const formAddTarjeta = document.getElementById("form-add-tarjeta");
+  const editTarjetaField = document.getElementById("edit-tarjeta-field");
+  const formEditTarjeta = document.getElementById("form-edit-tarjeta");
+  const tarjetasList = document.getElementById("compras-tarjetas-list");
+
+  function tarjetaCardHtml(t) {
+    return (
+      '<div class="compra-tarjeta-card" data-id="' + t.id + '" data-tarjeta="' + escapeHtml(t.tarjeta) + '">' +
+      '<span class="compra-tarjeta-text">' + escapeHtml(t.tarjeta) + "</span>" +
+      '<div class="icon-actions-group">' +
+      '<button type="button" class="icon-action btn-edit-tarjeta" title="Editar" data-id="' + t.id + '" data-tarjeta="' + escapeHtml(t.tarjeta) + '">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg></button>' +
+      '<button type="button" class="icon-action danger-hover btn-delete-tarjeta" title="Eliminar" data-id="' + t.id + '" data-tarjeta="' + escapeHtml(t.tarjeta) + '">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>' +
+      '<path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg></button>' +
+      "</div></div>"
+    );
+  }
+
+  function wireTarjetaCardButtons() {
+    tarjetasList.querySelectorAll(".btn-edit-tarjeta").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        formEditTarjeta.dataset.id = btn.dataset.id;
+        editTarjetaField.value = btn.dataset.tarjeta;
+        modalEditTarjeta.classList.remove("hidden");
+        editTarjetaField.focus();
+      });
+    });
+    tarjetasList.querySelectorAll(".btn-delete-tarjeta").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        showConfirm(`¿Eliminar la tarjeta "${btn.dataset.tarjeta}"?`, () => {
+          apiFetch(`/compras/tarjetas/${btn.dataset.id}/delete`, { method: "POST" })
+            .then((r) => r.json())
+            .then(() => {
+              const card = btn.closest(".compra-tarjeta-card");
+              if (card) card.remove();
+              if (!tarjetasList.querySelector(".compra-tarjeta-card")) {
+                tarjetasList.innerHTML = '<div class="list-empty">Todavía no has guardado ninguna tarjeta.</div>';
+              }
+              showToast("Tarjeta eliminada");
+            })
+            .catch((err) => {
+              if (err.message !== "unauthenticated") showToast("No se pudo eliminar la tarjeta.");
+            });
+        });
+      });
+    });
+  }
+
+  if (tarjetasList) wireTarjetaCardButtons();
+
+  if (btnAddTarjeta) {
+    btnAddTarjeta.addEventListener("click", () => {
+      addTarjetaField.value = "";
+      modalAddTarjeta.classList.remove("hidden");
+      addTarjetaField.focus();
+    });
+  }
+
+  if (formAddTarjeta) {
+    formAddTarjeta.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const tarjeta = addTarjetaField.value.trim();
+      if (!tarjeta) return;
+      apiFetch("/compras/tarjetas", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `tarjeta=${encodeURIComponent(tarjeta)}`,
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.error) {
+            showToast(data.error);
+            return;
+          }
+          modalAddTarjeta.classList.add("hidden");
+          const emptyState = tarjetasList.querySelector(".list-empty");
+          if (emptyState) emptyState.remove();
+          tarjetasList.insertAdjacentHTML("afterbegin", tarjetaCardHtml(data));
+          wireTarjetaCardButtons();
+          showToast("Tarjeta guardada");
+        })
+        .catch((err) => {
+          if (err.message !== "unauthenticated") showToast("No se pudo agregar la tarjeta.");
+        });
+    });
+  }
+
+  if (formEditTarjeta) {
+    formEditTarjeta.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const id = formEditTarjeta.dataset.id;
+      const tarjeta = editTarjetaField.value.trim();
+      if (!tarjeta) return;
+      apiFetch(`/compras/tarjetas/${id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `tarjeta=${encodeURIComponent(tarjeta)}`,
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.error) {
+            showToast(data.error);
+            return;
+          }
+          modalEditTarjeta.classList.add("hidden");
+          const card = tarjetasList.querySelector('.compra-tarjeta-card[data-id="' + id + '"]');
+          if (card) card.outerHTML = tarjetaCardHtml(data);
+          wireTarjetaCardButtons();
+          showToast("Tarjeta actualizada");
+        })
+        .catch((err) => {
+          if (err.message !== "unauthenticated") showToast("No se pudo guardar la tarjeta.");
+        });
+    });
+  }
 
   // ---------- Selección de correo + registro de compras ----------
   const comprasPanel = document.getElementById("compras-panel");

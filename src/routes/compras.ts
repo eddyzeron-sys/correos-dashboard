@@ -1,5 +1,5 @@
 import { Router, Request } from "express";
-import { db, CompraEmailRow, CompraTagRow } from "../db";
+import { db, CompraEmailRow, CompraTagRow, CompraTarjetaRow } from "../db";
 import { requireAuth } from "../middleware/require-auth";
 
 const router = Router();
@@ -15,6 +15,18 @@ function getOwnEmail(req: Request, id: string): CompraEmailRow | undefined {
   return db
     .prepare("SELECT * FROM compra_emails WHERE id = ? AND user_id = ?")
     .get(id, req.user!.id) as CompraEmailRow | undefined;
+}
+
+function listOwnTarjetas(req: Request): CompraTarjetaRow[] {
+  return db
+    .prepare("SELECT * FROM compra_tarjetas WHERE user_id = ? ORDER BY created_at DESC")
+    .all(req.user!.id) as unknown as CompraTarjetaRow[];
+}
+
+function getOwnTarjeta(req: Request, id: string): CompraTarjetaRow | undefined {
+  return db
+    .prepare("SELECT * FROM compra_tarjetas WHERE id = ? AND user_id = ?")
+    .get(id, req.user!.id) as CompraTarjetaRow | undefined;
 }
 
 function listOwnTags(req: Request): CompraTagRow[] {
@@ -57,6 +69,7 @@ router.get("/compras", (req, res) => {
   res.render("compras", {
     emails: listOwnEmails(req),
     tags: listOwnTags(req),
+    tarjetas: listOwnTarjetas(req),
     activeNav: "compras",
     error: null,
   });
@@ -96,6 +109,45 @@ router.post("/compras/emails/:id/delete", (req, res) => {
     return;
   }
   db.prepare("DELETE FROM compra_emails WHERE id = ?").run(existing.id);
+  res.json({ ok: true });
+});
+
+// "Mis tarjetas" — libreta de tarjetas guardadas del usuario. Por ahora solo
+// se guardan aquí (CRUD), sin conectarlas todavía al formulario de compra.
+router.post("/compras/tarjetas", (req, res) => {
+  const tarjeta = ((req.body as Record<string, string>).tarjeta || "").trim();
+  if (!tarjeta) {
+    res.status(400).json({ error: "La tarjeta es obligatoria." });
+    return;
+  }
+  const info = db
+    .prepare("INSERT INTO compra_tarjetas (user_id, tarjeta) VALUES (?, ?)")
+    .run(req.user!.id, tarjeta);
+  res.json({ id: Number(info.lastInsertRowid), tarjeta });
+});
+
+router.post("/compras/tarjetas/:id", (req, res) => {
+  const existing = getOwnTarjeta(req, req.params.id);
+  if (!existing) {
+    res.status(404).json({ error: "No encontrado" });
+    return;
+  }
+  const tarjeta = ((req.body as Record<string, string>).tarjeta || "").trim();
+  if (!tarjeta) {
+    res.status(400).json({ error: "La tarjeta es obligatoria." });
+    return;
+  }
+  db.prepare("UPDATE compra_tarjetas SET tarjeta = ? WHERE id = ?").run(tarjeta, existing.id);
+  res.json({ id: existing.id, tarjeta });
+});
+
+router.post("/compras/tarjetas/:id/delete", (req, res) => {
+  const existing = getOwnTarjeta(req, req.params.id);
+  if (!existing) {
+    res.status(404).json({ error: "No encontrado" });
+    return;
+  }
+  db.prepare("DELETE FROM compra_tarjetas WHERE id = ?").run(existing.id);
   res.json({ ok: true });
 });
 

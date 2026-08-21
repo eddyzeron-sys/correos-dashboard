@@ -18,32 +18,82 @@
           <p class="error"><%= error %></p>
         <% } %>
 
-        <div class="compras-layout">
-          <aside class="compras-sidebar">
-            <div class="compras-sidebar-header">
-              <span class="muted">Correos</span>
-              <button id="btn-add-email" class="btn-cta btn-icon-only" title="Agregar correo">
+        <div class="page-tabs">
+          <button type="button" class="page-tab-btn active" data-page-tab="registro">Registro de compras</button>
+          <button type="button" class="page-tab-btn" data-page-tab="tarjetas">Mis tarjetas</button>
+        </div>
+
+        <div class="page-tab-panel" data-page-tab-panel="registro">
+          <div class="compras-layout">
+            <aside class="compras-sidebar">
+              <div class="compras-sidebar-header">
+                <span class="muted">Correos</span>
+                <button id="btn-add-email" class="btn-cta btn-icon-only" title="Agregar correo">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                </button>
+              </div>
+              <div id="compras-emails-list">
+                <% if (!emails.length) { %>
+                  <div class="list-empty">Todavía no hay correos registrados.</div>
+                <% } %>
+                <% emails.forEach(function(e) { %>
+                  <div class="compra-email-card" data-id="<%= e.id %>" data-email="<%= e.email %>">
+                    <span class="compra-email-text"><%= e.email %></span>
+                    <div class="icon-actions-group">
+                      <button type="button" class="icon-action btn-edit-email" title="Editar" data-id="<%= e.id %>" data-email="<%= e.email %>">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M12 20h9"></path>
+                          <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+                        </svg>
+                      </button>
+                      <button type="button" class="icon-action danger-hover btn-delete-email" title="Eliminar" data-id="<%= e.id %>" data-email="<%= e.email %>">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M3 6h18"></path>
+                          <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                <% }) %>
+              </div>
+            </aside>
+
+            <section class="compras-panel" id="compras-panel">
+              <div class="list-empty">Selecciona un correo a la izquierda para ver su registro de compras.</div>
+            </section>
+          </div>
+        </div>
+
+        <div class="page-tab-panel hidden" data-page-tab-panel="tarjetas">
+          <div class="tarjetas-panel">
+            <div class="compras-panel-header">
+              <h2>Mis tarjetas</h2>
+              <button id="btn-add-tarjeta" class="btn-cta btn-icon-only" title="Agregar tarjeta">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <line x1="12" y1="5" x2="12" y2="19"></line>
                   <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
               </button>
             </div>
-            <div id="compras-emails-list">
-              <% if (!emails.length) { %>
-                <div class="list-empty">Todavía no hay correos registrados.</div>
+            <div id="compras-tarjetas-list" class="tarjetas-list">
+              <% if (!tarjetas.length) { %>
+                <div class="list-empty">Todavía no has guardado ninguna tarjeta.</div>
               <% } %>
-              <% emails.forEach(function(e) { %>
-                <div class="compra-email-card" data-id="<%= e.id %>" data-email="<%= e.email %>">
-                  <span class="compra-email-text"><%= e.email %></span>
+              <% tarjetas.forEach(function(t) { %>
+                <div class="compra-tarjeta-card" data-id="<%= t.id %>" data-tarjeta="<%= t.tarjeta %>">
+                  <span class="compra-tarjeta-text"><%= t.tarjeta %></span>
                   <div class="icon-actions-group">
-                    <button type="button" class="icon-action btn-edit-email" title="Editar" data-id="<%= e.id %>" data-email="<%= e.email %>">
+                    <button type="button" class="icon-action btn-edit-tarjeta" title="Editar" data-id="<%= t.id %>" data-tarjeta="<%= t.tarjeta %>">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 20h9"></path>
                         <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
                       </svg>
                     </button>
-                    <button type="button" class="icon-action danger-hover btn-delete-email" title="Eliminar" data-id="<%= e.id %>" data-email="<%= e.email %>">
+                    <button type="button" class="icon-action danger-hover btn-delete-tarjeta" title="Eliminar" data-id="<%= t.id %>" data-tarjeta="<%= t.tarjeta %>">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M3 6h18"></path>
                         <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -54,11 +104,7 @@
                 </div>
               <% }) %>
             </div>
-          </aside>
-
-          <section class="compras-panel" id="compras-panel">
-            <div class="list-empty">Selecciona un correo a la izquierda para ver su registro de compras.</div>
-          </section>
+          </div>
         </div>
       </main>
     </div>
@@ -94,6 +140,42 @@
       <h2>Editar correo</h2>
       <label>Correo</label>
       <input type="email" id="edit-email-field" required />
+      <div class="row mt">
+        <button type="submit" class="primary">Guardar</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Modal agregar tarjeta -->
+  <div id="modal-add-tarjeta" class="modal hidden">
+    <form class="card modal-card" id="form-add-tarjeta">
+      <button type="button" class="icon-action modal-close-btn btn-cancel" title="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+      <h2>Agregar tarjeta</h2>
+      <label>Tarjeta</label>
+      <input type="text" id="add-tarjeta-field" required placeholder="ej. Visa terminada en 1234" />
+      <div class="row mt">
+        <button type="submit" class="primary">Guardar</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Modal editar tarjeta -->
+  <div id="modal-edit-tarjeta" class="modal hidden">
+    <form class="card modal-card" id="form-edit-tarjeta">
+      <button type="button" class="icon-action modal-close-btn btn-cancel" title="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+      <h2>Editar tarjeta</h2>
+      <label>Tarjeta</label>
+      <input type="text" id="edit-tarjeta-field" required />
       <div class="row mt">
         <button type="submit" class="primary">Guardar</button>
       </div>

@@ -508,6 +508,25 @@ button.link:hover { background: none; color: var(--accent-dark); }
 .modal-tab-count { color: inherit; }
 .modal-tab-panel.hidden { display: none; }
 
+/* ---------- Pestañas de página (ej. Compras: Registro / Mis tarjetas) ---------- */
+.page-tabs { display: flex; gap: 4px; border-bottom: 1.5px solid var(--border); margin-bottom: 18px; }
+.page-tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 8px 4px;
+  margin-right: 22px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--muted);
+  min-height: auto;
+  width: auto;
+}
+.page-tab-btn.active { color: var(--accent-dark); border-bottom-color: var(--accent); }
+.page-tab-btn:hover { background: none; }
+.page-tab-panel.hidden { display: none; }
+
 /* ---------- Compras: correos (izquierda) + registro (derecha) ---------- */
 .compras-layout { display: flex; gap: 18px; align-items: flex-start; }
 
@@ -548,6 +567,31 @@ button.link:hover { background: none; color: var(--accent-dark); }
   line-height: 1.3;
 }
 .compra-email-card .icon-actions-group { flex-shrink: 0; }
+
+/* ---------- Mis tarjetas ---------- */
+.tarjetas-panel {
+  background: var(--surface-muted);
+  border-radius: var(--radius-sm);
+  padding: 20px;
+  max-width: 700px;
+}
+.tarjetas-list { display: flex; flex-direction: column; gap: 8px; }
+.compra-tarjeta-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  border: 1.5px solid var(--border);
+}
+.compra-tarjeta-card .compra-tarjeta-text {
+  font-weight: 700;
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+.compra-tarjeta-card .icon-actions-group { flex-shrink: 0; }
 
 .compras-panel {
   flex: 1;

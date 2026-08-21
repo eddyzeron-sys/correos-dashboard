@@ -90,6 +90,16 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  -- Libreta de tarjetas guardadas del usuario ("Mis tarjetas"), independiente
+  -- de cualquier compra — por ahora solo se guardan aquí, sin conectarlas
+  -- todavía al formulario de compra.
+  CREATE TABLE IF NOT EXISTS compra_tarjetas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    tarjeta TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
   CREATE TABLE IF NOT EXISTS compra_tags (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -411,6 +421,13 @@ export interface CompraEmailRow {
   id: number;
   user_id: number;
   email: string;
+  created_at: string;
+}
+
+export interface CompraTarjetaRow {
+  id: number;
+  user_id: number;
+  tarjeta: string;
   created_at: string;
 }
 
