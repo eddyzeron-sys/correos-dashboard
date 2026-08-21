@@ -24,6 +24,9 @@ db.exec(`
     password_hash TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
     status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'disabled')),
+    hide_correos INTEGER NOT NULL DEFAULT 0,
+    hide_trackings INTEGER NOT NULL DEFAULT 0,
+    hide_compras INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -117,6 +120,18 @@ db.exec(`
     montos TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
+
+  -- Trackings agregados a mano dentro de una compra (número, precio y
+  -- artículo) — independiente del menú "Trackings" (que detecta correos de
+  -- envío automáticamente).
+  CREATE TABLE IF NOT EXISTS compra_registro_trackings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    compra_registro_id INTEGER NOT NULL REFERENCES compra_registros(id) ON DELETE CASCADE,
+    numero_tracking TEXT NOT NULL,
+    precio REAL,
+    articulo TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `);
 
 function tableExists(name: string): boolean {
@@ -129,6 +144,17 @@ function tableExists(name: string): boolean {
 function columnExists(table: string, column: string): boolean {
   const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
   return cols.some((c) => c.name === column);
+}
+
+// Preferencia por-usuario de qué menús mostrar en el sidebar (Configuración).
+if (!columnExists("users", "hide_correos")) {
+  db.exec("ALTER TABLE users ADD COLUMN hide_correos INTEGER NOT NULL DEFAULT 0;");
+}
+if (!columnExists("users", "hide_trackings")) {
+  db.exec("ALTER TABLE users ADD COLUMN hide_trackings INTEGER NOT NULL DEFAULT 0;");
+}
+if (!columnExists("users", "hide_compras")) {
+  db.exec("ALTER TABLE users ADD COLUMN hide_compras INTEGER NOT NULL DEFAULT 0;");
 }
 
 // email_accounts pudo haberse creado con un esquema anterior (sin user_id o
@@ -332,6 +358,9 @@ export interface UserRow {
   password_hash: string;
   role: "admin" | "user";
   status: "pending" | "active" | "disabled";
+  hide_correos: number;
+  hide_trackings: number;
+  hide_compras: number;
   created_at: string;
 }
 
@@ -401,6 +430,15 @@ export interface CompraRegistroTiendaRow {
   compra_registro_id: number;
   tag_id: number | null;
   montos: string | null;
+  created_at: string;
+}
+
+export interface CompraRegistroTrackingRow {
+  id: number;
+  compra_registro_id: number;
+  numero_tracking: string;
+  precio: number | null;
+  articulo: string | null;
   created_at: string;
 }
 

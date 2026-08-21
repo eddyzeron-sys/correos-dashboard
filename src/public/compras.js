@@ -160,6 +160,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const compraTagsChecklist = document.getElementById("compra-tags-checklist");
   const newCompraTagName = document.getElementById("new-compra-tag-name");
   const btnAddCompraTag = document.getElementById("btn-add-compra-tag");
+  const compraTrackingsList = document.getElementById("compra-trackings-list");
+  const btnAddTracking = document.getElementById("btn-add-tracking");
 
   let selectedEmailId = null;
 
@@ -182,6 +184,13 @@ document.addEventListener("DOMContentLoaded", () => {
   // listas anidadas en atributos data-*.
   let registroDataById = new Map();
 
+  function trackingChipHtml(t) {
+    let text = escapeHtml(t.numero_tracking);
+    if (t.articulo) text += " — " + escapeHtml(t.articulo);
+    if (t.precio !== null && t.precio !== undefined && t.precio !== "") text += " $" + Number(t.precio).toFixed(2);
+    return '<div class="compra-tracking-chip">📦 ' + text + "</div>";
+  }
+
   function registroCardHtml(r) {
     registroDataById.set(r.id, r);
     const tiendaLines = r.tiendas.length
@@ -196,6 +205,10 @@ document.addEventListener("DOMContentLoaded", () => {
           )
           .join("")
       : '<div class="compra-tienda-line muted">Sin tienda</div>';
+    const trackingLines =
+      r.trackings && r.trackings.length
+        ? '<div class="compra-trackings-lines">' + r.trackings.map(trackingChipHtml).join("") + "</div>"
+        : "";
     return (
       '<div class="compra-registro-card" data-id="' + r.id + '">' +
       '<button type="button" class="btn-remove-registro" data-id="' + r.id + '" title="Eliminar">' +
@@ -207,6 +220,7 @@ document.addEventListener("DOMContentLoaded", () => {
       '<div class="compra-tiendas-lines">' +
       tiendaLines +
       "</div>" +
+      trackingLines +
       '<div class="compra-registro-correo"><span class="field-label">Correo</span><span class="field-value">' +
       escapeHtml(r.correo || "") +
       "</span></div>" +
@@ -372,6 +386,53 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  // ---------- Trackings dentro de la compra (número, precio, artículo) ----------
+  function trackingRowHtml() {
+    return (
+      '<div class="row compra-tracking-row">' +
+      '<input type="text" class="compra-tracking-numero" placeholder="Número de tracking" />' +
+      '<input type="text" class="compra-tracking-articulo" placeholder="Artículo, ej. Reloj" />' +
+      '<span class="muted" style="font-weight:700;">$</span>' +
+      '<input type="number" class="compra-tracking-precio" step="0.01" min="0" placeholder="Precio" />' +
+      '<button type="button" class="icon-action danger-hover btn-remove-tracking" title="Quitar tracking">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>' +
+      "</div>"
+    );
+  }
+
+  function addTrackingRow(existing) {
+    compraTrackingsList.insertAdjacentHTML("beforeend", trackingRowHtml());
+    const row = compraTrackingsList.lastElementChild;
+    if (existing) {
+      row.querySelector(".compra-tracking-numero").value = existing.numero_tracking || "";
+      row.querySelector(".compra-tracking-articulo").value = existing.articulo || "";
+      if (existing.precio !== null && existing.precio !== undefined) {
+        row.querySelector(".compra-tracking-precio").value = existing.precio;
+      }
+    }
+    return row;
+  }
+
+  compraTrackingsList.addEventListener("click", (e) => {
+    const removeBtn = e.target.closest(".btn-remove-tracking");
+    if (removeBtn) removeBtn.closest(".compra-tracking-row").remove();
+  });
+
+  if (btnAddTracking) {
+    btnAddTracking.addEventListener("click", () => addTrackingRow(null));
+  }
+
+  function collectTrackings() {
+    return Array.from(compraTrackingsList.querySelectorAll(".compra-tracking-row"))
+      .map((row) => ({
+        numero_tracking: row.querySelector(".compra-tracking-numero").value.trim(),
+        articulo: row.querySelector(".compra-tracking-articulo").value.trim(),
+        precio: row.querySelector(".compra-tracking-precio").value.trim(),
+      }))
+      .filter((t) => t.numero_tracking !== "");
+  }
+
   // existing === null → modo agregar. existing === {id, correo, tarjeta,
   // tiendas: [{tag_id, tag_name, montos}, ...]} → modo editar, con todas sus
   // tiendas precargadas y editables juntas (una sola tarjeta para todo).
@@ -383,6 +444,7 @@ document.addEventListener("DOMContentLoaded", () => {
     compraTarjetaField.value = existing ? existing.tarjeta || "" : "";
     newCompraTagName.value = "";
     compraMontoGroups.innerHTML = "";
+    compraTrackingsList.innerHTML = "";
     compraTagsChecklist.querySelectorAll(".tag-card").forEach((c) => c.classList.remove("selected"));
 
     if (existing) {
@@ -396,6 +458,7 @@ document.addEventListener("DOMContentLoaded", () => {
           .filter((s) => s !== "");
         addMontoGroup(t.tag_id, card.querySelector(".tag-card-name").textContent.trim(), values);
       });
+      (existing.trackings || []).forEach((t) => addTrackingRow(t));
     }
     updateMontoPlaceholder();
     modalAddCompra.classList.remove("hidden");
@@ -456,17 +519,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  function insertRegistroCard(registro) {
-    const emptyState = comprasPanel.querySelector(".list-empty");
-    if (emptyState) {
-      comprasPanel
-        .querySelector(".compras-panel-header")
-        .insertAdjacentHTML("afterend", '<div class="compra-registros-list"></div>');
-      emptyState.remove();
-    }
-    comprasPanel.querySelector(".compra-registros-list").insertAdjacentHTML("afterbegin", registroCardHtml(registro));
-  }
-
   if (formAddCompra) {
     formAddCompra.addEventListener("submit", (e) => {
       e.preventDefault();
@@ -489,7 +541,8 @@ document.addEventListener("DOMContentLoaded", () => {
         tag_id: group.dataset.tagId,
         montos: collectGroupMontos(group).join(","),
       }));
-      const payload = { compra_email_id: selectedEmailId, correo, tarjeta, tiendas };
+      const trackings = collectTrackings();
+      const payload = { compra_email_id: selectedEmailId, correo, tarjeta, tiendas, trackings };
       const url = editingRegistroId ? `/compras/registros/${editingRegistroId}` : "/compras/registros";
 
       apiFetch(url, {

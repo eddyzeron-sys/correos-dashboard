@@ -23,7 +23,7 @@ const registerLimiter = rateLimit({
 
 router.get("/login", (req, res) => {
   if (req.session.userId) {
-    res.redirect("/dashboard");
+    res.redirect("/inicio");
     return;
   }
   res.render("login", { error: null });
@@ -58,7 +58,7 @@ router.post("/login", loginLimiter, (req, res) => {
       return;
     }
     req.session.userId = user.id;
-    res.redirect("/dashboard");
+    res.redirect("/inicio");
   });
 });
 
@@ -70,7 +70,7 @@ router.post("/logout", (req, res) => {
 
 router.get("/register", (req, res) => {
   if (req.session.userId) {
-    res.redirect("/dashboard");
+    res.redirect("/inicio");
     return;
   }
   res.render("register", { error: null, success: false });

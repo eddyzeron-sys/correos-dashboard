@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <title>Configuración</title>
+  <%- include('partials/head') %>
+</head>
+<body>
+  <div class="shell-wrap">
+    <div class="app-shell">
+      <%- include('partials/sidebar', { activeNav: 'configuracion' }) %>
+      <main class="app-main">
+        <header class="topbar">
+          <h1>Configuración</h1>
+        </header>
+
+        <% if (saved) { %>
+          <p class="success">Cambios guardados.</p>
+        <% } %>
+
+        <div class="settings-panel">
+          <p class="muted">Elige qué menús se muestran en la barra lateral.</p>
+          <form method="POST" action="/configuracion">
+            <div class="settings-row">
+              <div>
+                <div class="settings-row-title">Correos</div>
+                <div class="muted settings-row-desc">Crear y administrar cuentas de correo</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" name="show_correos" <%= !user.hide_correos ? 'checked' : '' %> />
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-row-title">Trackings</div>
+                <div class="muted settings-row-desc">Envíos detectados automáticamente</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" name="show_trackings" <%= !user.hide_trackings ? 'checked' : '' %> />
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-row-title">Compras</div>
+                <div class="muted settings-row-desc">Registro de compras online</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" name="show_compras" <%= !user.hide_compras ? 'checked' : '' %> />
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+            <button type="submit" class="primary mt">Guardar</button>
+          </form>
+        </div>
+      </main>
+    </div>
+  </div>
+</body>
+</html>
