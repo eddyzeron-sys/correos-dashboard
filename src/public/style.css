@@ -467,10 +467,15 @@ button.link:hover { background: none; color: var(--accent-dark); }
   border-radius: var(--radius-sm);
   padding: 14px 40px 14px 16px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px 18px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 24px;
   align-items: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
 }
+.compra-registro-card:hover { border-color: var(--accent); }
+.compra-registro-card > div { flex-shrink: 0; white-space: nowrap; }
 .compra-registro-card .field-label { font-size: 0.72rem; color: var(--muted); display: block; }
 .compra-registro-card .field-value { font-weight: 700; font-size: 0.9rem; }
 .compra-registro-card .monto-value { color: var(--accent-dark); }

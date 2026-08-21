@@ -109,9 +109,9 @@
           <line x1="6" y1="6" x2="18" y2="18"></line>
         </svg>
       </button>
-      <h2>Agregar compra</h2>
+      <h2 id="modal-add-compra-title">Agregar compra</h2>
 
-      <label>Tienda (etiqueta) <span class="muted">— elige primero</span></label>
+      <label>Tienda <span class="muted">— elige primero</span></label>
       <div class="tag-checklist" id="compra-tags-checklist">
         <% tags.forEach(function(t) { %>
           <div class="tag-card" data-tag-id="<%= t.id %>">
@@ -139,7 +139,7 @@
       <p class="muted field-hint" id="compra-monto-hint">Elige una tienda arriba para poder poner el gasto.</p>
 
       <div class="row mt">
-        <button type="submit" class="primary">Guardar compra</button>
+        <button type="submit" class="primary" id="btn-submit-compra">Guardar compra</button>
       </div>
     </form>
   </div>

@@ -122,43 +122,79 @@ router.get("/compras/emails/:id/registros", (req, res) => {
   res.json({ registros });
 });
 
-router.post("/compras/registros", (req, res) => {
-  const body = req.body as Record<string, string>;
-  const email = getOwnEmail(req, body.compra_email_id);
-  if (!email) {
-    res.status(400).json({ error: "Correo inválido." });
-    return;
-  }
-  const correo = (body.correo || "").trim();
-  if (!correo) {
-    res.status(400).json({ error: "El correo es obligatorio." });
-    return;
-  }
-  // La tienda (etiqueta) se elige primero — sin eso no se guarda el gasto.
-  const tag = body.tag_id ? getOwnTag(req, body.tag_id) : undefined;
-  if (!tag) {
-    res.status(400).json({ error: "Elige primero la tienda (etiqueta)." });
-    return;
-  }
-  const tarjeta = (body.tarjeta || "").trim() || null;
-  const montoNum = body.monto ? Number(body.monto) : null;
-  const monto = montoNum !== null && !Number.isNaN(montoNum) ? montoNum : null;
-
-  const info = db
-    .prepare(
-      "INSERT INTO compra_registros (user_id, compra_email_id, correo, tarjeta, tag_id, monto) VALUES (?, ?, ?, ?, ?, ?)"
-    )
-    .run(req.user!.id, email.id, correo, tarjeta, tag.id, monto);
-
-  const registro = db
+function getRegistroWithTag(id: number | bigint): RegistroWithTag {
+  return db
     .prepare(
       `SELECT r.id, r.compra_email_id, r.correo, r.tarjeta, r.monto, r.created_at, r.tag_id, t.name as tag_name
        FROM compra_registros r
        LEFT JOIN compra_tags t ON t.id = r.tag_id
        WHERE r.id = ?`
     )
-    .get(info.lastInsertRowid) as unknown as RegistroWithTag;
-  res.json({ registro });
+    .get(id) as unknown as RegistroWithTag;
+}
+
+// Valida y devuelve los campos comunes a crear/editar una compra, o null (ya
+// respondió el error) si algo falta.
+function parseRegistroBody(
+  req: Request,
+  res: import("express").Response
+): { correo: string; tarjeta: string | null; tagId: number; monto: number | null } | null {
+  const body = req.body as Record<string, string>;
+  const correo = (body.correo || "").trim();
+  if (!correo) {
+    res.status(400).json({ error: "El correo es obligatorio." });
+    return null;
+  }
+  // La tienda se elige primero — sin eso no se guarda el gasto.
+  const tag = body.tag_id ? getOwnTag(req, body.tag_id) : undefined;
+  if (!tag) {
+    res.status(400).json({ error: "Elige primero la tienda." });
+    return null;
+  }
+  const tarjeta = (body.tarjeta || "").trim() || null;
+  const montoNum = body.monto ? Number(body.monto) : null;
+  const monto = montoNum !== null && !Number.isNaN(montoNum) ? montoNum : null;
+  return { correo, tarjeta, tagId: tag.id, monto };
+}
+
+router.post("/compras/registros", (req, res) => {
+  const email = getOwnEmail(req, (req.body as Record<string, string>).compra_email_id);
+  if (!email) {
+    res.status(400).json({ error: "Correo inválido." });
+    return;
+  }
+  const parsed = parseRegistroBody(req, res);
+  if (!parsed) return;
+
+  const info = db
+    .prepare(
+      "INSERT INTO compra_registros (user_id, compra_email_id, correo, tarjeta, tag_id, monto) VALUES (?, ?, ?, ?, ?, ?)"
+    )
+    .run(req.user!.id, email.id, parsed.correo, parsed.tarjeta, parsed.tagId, parsed.monto);
+
+  res.json({ registro: getRegistroWithTag(info.lastInsertRowid) });
+});
+
+router.post("/compras/registros/:id", (req, res) => {
+  const existing = db
+    .prepare("SELECT id FROM compra_registros WHERE id = ? AND user_id = ?")
+    .get(req.params.id, req.user!.id) as { id: number } | undefined;
+  if (!existing) {
+    res.status(404).json({ error: "No encontrado" });
+    return;
+  }
+  const parsed = parseRegistroBody(req, res);
+  if (!parsed) return;
+
+  db.prepare("UPDATE compra_registros SET correo = ?, tarjeta = ?, tag_id = ?, monto = ? WHERE id = ?").run(
+    parsed.correo,
+    parsed.tarjeta,
+    parsed.tagId,
+    parsed.monto,
+    existing.id
+  );
+
+  res.json({ registro: getRegistroWithTag(existing.id) });
 });
 
 router.post("/compras/registros/:id/delete", (req, res) => {

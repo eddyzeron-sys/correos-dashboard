@@ -175,14 +175,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function registroCardHtml(r) {
     return (
-      '<div class="compra-registro-card" data-id="' + r.id + '">' +
+      '<div class="compra-registro-card" data-id="' + r.id + '" data-tag-id="' + (r.tag_id || "") + '"' +
+      ' data-tarjeta="' + escapeHtml(r.tarjeta || "") + '" data-monto="' + (r.monto || "") + '"' +
+      ' data-correo="' + escapeHtml(r.correo || "") + '">' +
       '<button type="button" class="btn-remove-registro" data-id="' + r.id + '" title="Eliminar">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
       '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>' +
       '<div><span class="field-label">Tarjeta</span><span class="field-value">' +
       (r.tarjeta ? escapeHtml(r.tarjeta) : "—") +
       "</span></div>" +
-      '<div><span class="field-label">Etiqueta</span><span class="field-value">' +
+      '<div><span class="field-label">Tienda</span><span class="field-value">' +
       (r.tag_name ? escapeHtml(r.tag_name) : "—") +
       "</span></div>" +
       '<div><span class="field-label">Gastado</span><span class="field-value monto-value">$' +
@@ -197,7 +199,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function wireRegistroDeleteButtons() {
     comprasPanel.querySelectorAll(".btn-remove-registro").forEach((btn) => {
-      btn.addEventListener("click", () => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
         showConfirm("¿Eliminar esta compra registrada?", () => {
           apiFetch(`/compras/registros/${btn.dataset.id}/delete`, { method: "POST" })
             .then((r) => r.json())
@@ -209,6 +212,20 @@ document.addEventListener("DOMContentLoaded", () => {
             .catch((err) => {
               if (err.message !== "unauthenticated") showToast("No se pudo eliminar.");
             });
+        });
+      });
+    });
+  }
+
+  function wireRegistroCardClicks() {
+    comprasPanel.querySelectorAll(".compra-registro-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        openCompraModal({
+          id: card.dataset.id,
+          tag_id: card.dataset.tagId,
+          tarjeta: card.dataset.tarjeta,
+          monto: card.dataset.monto,
+          correo: card.dataset.correo,
         });
       });
     });
@@ -233,8 +250,9 @@ document.addEventListener("DOMContentLoaded", () => {
       '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button></div>' +
       listHtml;
 
-    document.getElementById("btn-add-compra").addEventListener("click", openAddCompraModal);
+    document.getElementById("btn-add-compra").addEventListener("click", () => openCompraModal(null));
     wireRegistroDeleteButtons();
+    wireRegistroCardClicks();
   }
 
   function loadRegistrosFor(id, email) {
@@ -257,8 +275,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // ---------- Modal "Agregar compra" ----------
-  // El monto no se puede tocar hasta elegir la tienda (etiqueta) primero.
+  // ---------- Modal "Agregar/editar compra" ----------
+  const modalTitle = document.getElementById("modal-add-compra-title");
+  const btnSubmitCompra = document.getElementById("btn-submit-compra");
+  let editingRegistroId = null;
+
+  // El monto no se puede tocar hasta elegir la tienda primero.
   function updateMontoLock() {
     const hasTag = !!compraTagsChecklist.querySelector(".tag-card.selected");
     compraMontoField.disabled = !hasTag;
@@ -266,13 +288,19 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!hasTag) compraMontoField.value = "";
   }
 
-  function openAddCompraModal() {
-    compraCorreoField.value = selectedEmailText || "";
-    compraTarjetaField.value = "";
-    compraMontoField.value = "";
+  // existing === null → modo agregar. existing === {id, tag_id, tarjeta, monto, correo} → modo editar.
+  function openCompraModal(existing) {
+    editingRegistroId = existing ? existing.id : null;
+    modalTitle.textContent = existing ? "Editar compra" : "Agregar compra";
+    btnSubmitCompra.textContent = existing ? "Guardar cambios" : "Guardar compra";
+    compraCorreoField.value = existing ? existing.correo : selectedEmailText || "";
+    compraTarjetaField.value = existing ? existing.tarjeta : "";
     newCompraTagName.value = "";
-    compraTagsChecklist.querySelectorAll(".tag-card").forEach((c) => c.classList.remove("selected"));
+    compraTagsChecklist.querySelectorAll(".tag-card").forEach((c) => {
+      c.classList.toggle("selected", existing && String(c.dataset.tagId) === String(existing.tag_id));
+    });
     updateMontoLock();
+    compraMontoField.value = existing ? existing.monto : "";
     modalAddCompra.classList.remove("hidden");
   }
 
@@ -327,7 +355,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!selectedEmailId) return;
       const selectedTag = compraTagsChecklist.querySelector(".tag-card.selected");
       if (!selectedTag) {
-        showToast("Elige primero la tienda (etiqueta).");
+        showToast("Elige primero la tienda.");
         return;
       }
       const correo = compraCorreoField.value.trim();
@@ -342,7 +370,8 @@ document.addEventListener("DOMContentLoaded", () => {
         monto: compraMontoField.value,
         tag_id: selectedTag.dataset.tagId,
       });
-      apiFetch("/compras/registros", { method: "POST", body })
+      const url = editingRegistroId ? `/compras/registros/${editingRegistroId}` : "/compras/registros";
+      apiFetch(url, { method: "POST", body })
         .then((r) => r.json())
         .then((data) => {
           if (data.error) {
@@ -350,22 +379,31 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
           }
           modalAddCompra.classList.add("hidden");
-          const emptyState = comprasPanel.querySelector(".list-empty");
-          if (emptyState) {
-            comprasPanel.querySelector(".compras-panel-header").insertAdjacentHTML(
-              "afterend",
-              '<div class="compra-registros-list"></div>'
-            );
-            emptyState.remove();
+
+          const existingCard = editingRegistroId
+            ? comprasPanel.querySelector('.compra-registro-card[data-id="' + editingRegistroId + '"]')
+            : null;
+          if (existingCard) {
+            existingCard.outerHTML = registroCardHtml(data.registro);
+          } else {
+            const emptyState = comprasPanel.querySelector(".list-empty");
+            if (emptyState) {
+              comprasPanel.querySelector(".compras-panel-header").insertAdjacentHTML(
+                "afterend",
+                '<div class="compra-registros-list"></div>'
+              );
+              emptyState.remove();
+            }
+            comprasPanel
+              .querySelector(".compra-registros-list")
+              .insertAdjacentHTML("afterbegin", registroCardHtml(data.registro));
           }
-          comprasPanel
-            .querySelector(".compra-registros-list")
-            .insertAdjacentHTML("afterbegin", registroCardHtml(data.registro));
           wireRegistroDeleteButtons();
-          showToast("Compra agregada");
+          wireRegistroCardClicks();
+          showToast(editingRegistroId ? "Compra actualizada" : "Compra agregada");
         })
         .catch((err) => {
-          if (err.message !== "unauthenticated") showToast("No se pudo agregar la compra.");
+          if (err.message !== "unauthenticated") showToast("No se pudo guardar la compra.");
         });
     });
   }
