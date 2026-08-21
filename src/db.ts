@@ -106,6 +106,17 @@ db.exec(`
     montos TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
+
+  -- Una compra (compra_registros = una tarjeta) puede incluir varias tiendas
+  -- a la vez (ej. Depop y Vinted en la misma tarjeta), cada una con su propia
+  -- lista de montos sin sumar.
+  CREATE TABLE IF NOT EXISTS compra_registro_tiendas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    compra_registro_id INTEGER NOT NULL REFERENCES compra_registros(id) ON DELETE CASCADE,
+    tag_id INTEGER REFERENCES compra_tags(id) ON DELETE SET NULL,
+    montos TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `);
 
 function tableExists(name: string): boolean {
@@ -261,6 +272,24 @@ if (tableExists("compra_registros") && !columnExists("compra_registros", "montos
   );
 }
 
+// Una compra ahora puede tener varias tiendas dentro de una sola tarjeta
+// (compra_registro_tiendas). Las filas viejas de compra_registros (una por
+// tienda) se migran una sola vez a esa tabla hija, conservando cada tienda
+// como su propia tarjeta (no se intenta adivinar cuáles pertenecían a la
+// misma sesión de compra).
+if (tableExists("compra_registros") && tableExists("compra_registro_tiendas")) {
+  const yaMigrado = db.prepare("SELECT COUNT(*) as n FROM compra_registro_tiendas").get() as { n: number };
+  const pendientes = db
+    .prepare("SELECT COUNT(*) as n FROM compra_registros WHERE tag_id IS NOT NULL OR montos IS NOT NULL")
+    .get() as { n: number };
+  if (yaMigrado.n === 0 && pendientes.n > 0) {
+    db.exec(
+      `INSERT INTO compra_registro_tiendas (compra_registro_id, tag_id, montos, created_at)
+       SELECT id, tag_id, montos, created_at FROM compra_registros WHERE tag_id IS NOT NULL OR montos IS NOT NULL`
+    );
+  }
+}
+
 // Cualquier usuario ya existente que todavía no tenga etiquetas (por ejemplo
 // el admin de antes de que existiera esta función) recibe las de ejemplo.
 function backfillDefaultTags(): void {
@@ -362,6 +391,14 @@ export interface CompraRegistroRow {
   compra_email_id: number;
   correo: string;
   tarjeta: string | null;
+  tag_id: number | null;
+  montos: string | null;
+  created_at: string;
+}
+
+export interface CompraRegistroTiendaRow {
+  id: number;
+  compra_registro_id: number;
   tag_id: number | null;
   montos: string | null;
   created_at: string;

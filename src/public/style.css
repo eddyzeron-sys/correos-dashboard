@@ -483,19 +483,18 @@ button.link:hover { background: none; color: var(--accent-dark); }
   border: 1.5px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 10px 40px 10px 14px;
-  display: flex;
-  flex-wrap: wrap;
-  row-gap: 4px;
-  column-gap: 16px;
-  align-items: center;
   cursor: pointer;
   transition: border-color 0.15s ease;
 }
 .compra-registro-card:hover { border-color: var(--accent); }
-.compra-registro-card > div { flex-shrink: 0; white-space: nowrap; }
 .compra-registro-card .field-label { font-size: 0.62rem; color: var(--muted); display: block; }
 .compra-registro-card .field-value { font-weight: 700; font-size: 0.76rem; }
-.compra-registro-card .monto-value { color: var(--accent-dark); }
+.compra-registro-top { margin-bottom: 6px; }
+.compra-tiendas-lines { display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px; }
+.compra-tienda-line { font-size: 0.76rem; }
+.compra-tienda-line b { color: var(--accent-dark); }
+.compra-tienda-line.muted { color: var(--muted); }
+.compra-registro-correo { margin-top: 2px; }
 .btn-remove-registro {
   position: absolute;
   top: 10px;

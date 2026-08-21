@@ -29,15 +29,19 @@ function getOwnTag(req: Request, id: string): { id: number } | undefined {
     .get(id, req.user!.id) as { id: number } | undefined;
 }
 
-type RegistroWithTag = {
+type TiendaGroup = {
+  tag_id: number | null;
+  tag_name: string | null;
+  montos: string | null;
+};
+
+type RegistroWithTiendas = {
   id: number;
   compra_email_id: number;
   correo: string;
   tarjeta: string | null;
-  montos: string | null;
   created_at: string;
-  tag_id: number | null;
-  tag_name: string | null;
+  tiendas: TiendaGroup[];
 };
 
 router.get("/compras", (req, res) => {
@@ -103,67 +107,82 @@ router.post("/compras/tags", (req, res) => {
   }
 });
 
-// Registros de compra de un correo en particular.
+function getTiendasForRegistro(registroId: number): TiendaGroup[] {
+  return db
+    .prepare(
+      `SELECT t.tag_id, tg.name as tag_name, t.montos
+       FROM compra_registro_tiendas t
+       LEFT JOIN compra_tags tg ON tg.id = t.tag_id
+       WHERE t.compra_registro_id = ?
+       ORDER BY t.id`
+    )
+    .all(registroId) as unknown as TiendaGroup[];
+}
+
+function getRegistroWithTiendas(id: number | bigint): RegistroWithTiendas {
+  const base = db
+    .prepare("SELECT id, compra_email_id, correo, tarjeta, created_at FROM compra_registros WHERE id = ?")
+    .get(id) as Omit<RegistroWithTiendas, "tiendas">;
+  return { ...base, tiendas: getTiendasForRegistro(Number(id)) };
+}
+
+// Registros de compra de un correo en particular. Cada registro es UNA
+// tarjeta que puede agrupar varias tiendas (ej. Depop y Vinted juntas).
 router.get("/compras/emails/:id/registros", (req, res) => {
   const email = getOwnEmail(req, req.params.id);
   if (!email) {
     res.status(404).json({ error: "No encontrado" });
     return;
   }
-  const registros = db
+  const base = db
     .prepare(
-      `SELECT r.id, r.compra_email_id, r.correo, r.tarjeta, r.montos, r.created_at, r.tag_id, t.name as tag_name
-       FROM compra_registros r
-       LEFT JOIN compra_tags t ON t.id = r.tag_id
-       WHERE r.compra_email_id = ?
-       ORDER BY r.created_at DESC`
+      `SELECT id, compra_email_id, correo, tarjeta, created_at
+       FROM compra_registros WHERE compra_email_id = ? ORDER BY created_at DESC`
     )
-    .all(email.id) as unknown as RegistroWithTag[];
+    .all(email.id) as Omit<RegistroWithTiendas, "tiendas">[];
+  const registros: RegistroWithTiendas[] = base.map((r) => ({ ...r, tiendas: getTiendasForRegistro(r.id) }));
   res.json({ registros });
 });
-
-function getRegistroWithTag(id: number | bigint): RegistroWithTag {
-  return db
-    .prepare(
-      `SELECT r.id, r.compra_email_id, r.correo, r.tarjeta, r.montos, r.created_at, r.tag_id, t.name as tag_name
-       FROM compra_registros r
-       LEFT JOIN compra_tags t ON t.id = r.tag_id
-       WHERE r.id = ?`
-    )
-    .get(id) as unknown as RegistroWithTag;
-}
 
 // Valida y devuelve los campos comunes a crear/editar una compra, o null (ya
 // respondió el error) si algo falta.
 function parseRegistroBody(
   req: Request,
   res: import("express").Response
-): { correo: string; tarjeta: string | null; tagId: number; montos: string | null } | null {
-  const body = req.body as Record<string, string>;
+): { correo: string; tarjeta: string | null; tiendas: { tagId: number; montos: string | null }[] } | null {
+  const body = req.body as {
+    correo?: string;
+    tarjeta?: string;
+    tiendas?: { tag_id?: string | number; montos?: string }[];
+  };
   const correo = (body.correo || "").trim();
   if (!correo) {
     res.status(400).json({ error: "El correo es obligatorio." });
     return null;
   }
-  // La tienda se elige primero — sin eso no se guarda el gasto.
-  const tag = body.tag_id ? getOwnTag(req, body.tag_id) : undefined;
-  if (!tag) {
-    res.status(400).json({ error: "Elige primero la tienda." });
+  const rawTiendas = Array.isArray(body.tiendas) ? body.tiendas : [];
+  const tiendas: { tagId: number; montos: string | null }[] = [];
+  for (const t of rawTiendas) {
+    const tag = t && t.tag_id !== undefined ? getOwnTag(req, String(t.tag_id)) : undefined;
+    if (!tag) continue;
+    // Los montos se guardan tal cual se ingresaron, separados por coma — sin
+    // sumarlos. Ej. "15,59" queda como "Depop: $15, $59" al mostrarse.
+    const montosRaw = String(t.montos || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s !== "" && !Number.isNaN(Number(s)));
+    tiendas.push({ tagId: tag.id, montos: montosRaw.length ? montosRaw.join(",") : null });
+  }
+  if (!tiendas.length) {
+    res.status(400).json({ error: "Elige al menos una tienda." });
     return null;
   }
   const tarjeta = (body.tarjeta || "").trim() || null;
-  // Los montos se guardan tal cual se ingresaron, separados por coma — sin
-  // sumarlos. Ej. "15,59" queda como "Depop: $15, $59" al mostrarse.
-  const montosRaw = (body.montos || "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter((s) => s !== "" && !Number.isNaN(Number(s)));
-  const montos = montosRaw.length ? montosRaw.join(",") : null;
-  return { correo, tarjeta, tagId: tag.id, montos };
+  return { correo, tarjeta, tiendas };
 }
 
 router.post("/compras/registros", (req, res) => {
-  const email = getOwnEmail(req, (req.body as Record<string, string>).compra_email_id);
+  const email = getOwnEmail(req, (req.body as { compra_email_id?: string }).compra_email_id || "");
   if (!email) {
     res.status(400).json({ error: "Correo inválido." });
     return;
@@ -172,12 +191,15 @@ router.post("/compras/registros", (req, res) => {
   if (!parsed) return;
 
   const info = db
-    .prepare(
-      "INSERT INTO compra_registros (user_id, compra_email_id, correo, tarjeta, tag_id, montos) VALUES (?, ?, ?, ?, ?, ?)"
-    )
-    .run(req.user!.id, email.id, parsed.correo, parsed.tarjeta, parsed.tagId, parsed.montos);
+    .prepare("INSERT INTO compra_registros (user_id, compra_email_id, correo, tarjeta) VALUES (?, ?, ?, ?)")
+    .run(req.user!.id, email.id, parsed.correo, parsed.tarjeta);
+  const registroId = Number(info.lastInsertRowid);
+  const insertTienda = db.prepare(
+    "INSERT INTO compra_registro_tiendas (compra_registro_id, tag_id, montos) VALUES (?, ?, ?)"
+  );
+  for (const t of parsed.tiendas) insertTienda.run(registroId, t.tagId, t.montos);
 
-  res.json({ registro: getRegistroWithTag(info.lastInsertRowid) });
+  res.json({ registro: getRegistroWithTiendas(registroId) });
 });
 
 router.post("/compras/registros/:id", (req, res) => {
@@ -191,15 +213,18 @@ router.post("/compras/registros/:id", (req, res) => {
   const parsed = parseRegistroBody(req, res);
   if (!parsed) return;
 
-  db.prepare("UPDATE compra_registros SET correo = ?, tarjeta = ?, tag_id = ?, montos = ? WHERE id = ?").run(
+  db.prepare("UPDATE compra_registros SET correo = ?, tarjeta = ? WHERE id = ?").run(
     parsed.correo,
     parsed.tarjeta,
-    parsed.tagId,
-    parsed.montos,
     existing.id
   );
+  db.prepare("DELETE FROM compra_registro_tiendas WHERE compra_registro_id = ?").run(existing.id);
+  const insertTienda = db.prepare(
+    "INSERT INTO compra_registro_tiendas (compra_registro_id, tag_id, montos) VALUES (?, ?, ?)"
+  );
+  for (const t of parsed.tiendas) insertTienda.run(existing.id, t.tagId, t.montos);
 
-  res.json({ registro: getRegistroWithTag(existing.id) });
+  res.json({ registro: getRegistroWithTiendas(existing.id) });
 });
 
 router.post("/compras/registros/:id/delete", (req, res) => {
