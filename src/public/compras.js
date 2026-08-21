@@ -380,7 +380,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return (
       '<div class="row compra-tracking-row">' +
       '<input type="text" class="compra-tracking-numero" placeholder="Número de tracking" />' +
-      '<input type="text" class="compra-tracking-articulo" placeholder="Artículo, ej. Reloj" />' +
       '<span class="muted" style="font-weight:700;">$</span>' +
       '<input type="number" class="compra-tracking-precio" step="0.01" min="0" placeholder="Precio" />' +
       '<button type="button" class="icon-action danger-hover btn-remove-tracking" title="Quitar tracking">' +
@@ -395,7 +394,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const row = compraTrackingsList.lastElementChild;
     if (existing) {
       row.querySelector(".compra-tracking-numero").value = existing.numero_tracking || "";
-      row.querySelector(".compra-tracking-articulo").value = existing.articulo || "";
       if (existing.precio !== null && existing.precio !== undefined) {
         row.querySelector(".compra-tracking-precio").value = existing.precio;
       }
@@ -420,7 +418,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return Array.from(compraTrackingsList.querySelectorAll(".compra-tracking-row"))
       .map((row) => ({
         numero_tracking: row.querySelector(".compra-tracking-numero").value.trim(),
-        articulo: row.querySelector(".compra-tracking-articulo").value.trim(),
         precio: row.querySelector(".compra-tracking-precio").value.trim(),
       }))
       .filter((t) => t.numero_tracking !== "");
