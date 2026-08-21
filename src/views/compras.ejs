@@ -111,32 +111,43 @@
       </button>
       <h2 id="modal-add-compra-title">Agregar compra</h2>
 
-      <label>Tienda <span class="muted" id="compra-tienda-hint">— puedes elegir varias</span></label>
-      <div class="tag-checklist" id="compra-tags-checklist">
-        <% tags.forEach(function(t) { %>
-          <div class="tag-card" data-tag-id="<%= t.id %>">
-            <span class="tag-card-name"><%= t.name %></span>
-          </div>
-        <% }) %>
-      </div>
-      <% if (!tags.length) { %><p class="tag-check-empty" id="compra-tags-empty-msg">No tienes etiquetas todavía.</p><% } %>
-      <div class="row mt">
-        <input type="text" id="new-compra-tag-name" placeholder="Nueva etiqueta, ej. Depop" />
-        <button type="button" id="btn-add-compra-tag">+ Agregar</button>
+      <div class="modal-tabs">
+        <button type="button" class="modal-tab-btn active" data-tab="detalles">Detalles</button>
+        <button type="button" class="modal-tab-btn" data-tab="trackings">Trackings <span class="modal-tab-count" id="compra-trackings-count"></span></button>
       </div>
 
-      <label class="mt">Correo</label>
-      <input type="email" id="compra-correo-field" required placeholder="ej. tucorreo@gmail.com" />
+      <div class="modal-tab-panel" data-tab-panel="detalles">
+        <label>Tienda <span class="muted" id="compra-tienda-hint">— puedes elegir varias</span></label>
+        <div class="tag-checklist" id="compra-tags-checklist">
+          <% tags.forEach(function(t) { %>
+            <div class="tag-card" data-tag-id="<%= t.id %>">
+              <span class="tag-card-name"><%= t.name %></span>
+            </div>
+          <% }) %>
+        </div>
+        <% if (!tags.length) { %><p class="tag-check-empty" id="compra-tags-empty-msg">No tienes etiquetas todavía.</p><% } %>
+        <div class="row mt">
+          <input type="text" id="new-compra-tag-name" placeholder="Nueva etiqueta, ej. Depop" />
+          <button type="button" id="btn-add-compra-tag">+ Agregar</button>
+        </div>
 
-      <label class="mt">Tarjeta usada</label>
-      <input type="text" id="compra-tarjeta-field" placeholder="ej. Visa terminada en 1234" />
+        <label class="mt">Correo</label>
+        <input type="email" id="compra-correo-field" required placeholder="ej. tucorreo@gmail.com" />
 
-      <div id="compra-monto-groups"></div>
-      <p class="muted field-hint" id="compra-monto-hint">Elige una o más tiendas arriba para poder poner el gasto de cada una.</p>
+        <label class="mt">Tarjeta usada</label>
+        <input type="text" id="compra-tarjeta-field" placeholder="ej. Visa terminada en 1234" />
 
-      <label class="mt">Trackings</label>
-      <div id="compra-trackings-list"></div>
-      <button type="button" class="link" id="btn-add-tracking">+ Agregar tracking</button>
+        <label class="mt">Descripción</label>
+        <input type="text" id="compra-descripcion-field" placeholder="ej. Amazon Echo" />
+
+        <div id="compra-monto-groups"></div>
+        <p class="muted field-hint" id="compra-monto-hint">Elige una o más tiendas arriba para poder poner el gasto de cada una.</p>
+      </div>
+
+      <div class="modal-tab-panel hidden" data-tab-panel="trackings">
+        <div id="compra-trackings-list"></div>
+        <button type="button" class="link" id="btn-add-tracking">+ Agregar tracking</button>
+      </div>
 
       <div class="row mt">
         <button type="submit" class="primary" id="btn-submit-compra">Guardar compra</button>

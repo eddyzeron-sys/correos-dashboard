@@ -156,12 +156,34 @@ document.addEventListener("DOMContentLoaded", () => {
   const formAddCompra = document.getElementById("form-add-compra");
   const compraCorreoField = document.getElementById("compra-correo-field");
   const compraTarjetaField = document.getElementById("compra-tarjeta-field");
+  const compraDescripcionField = document.getElementById("compra-descripcion-field");
   const compraMontoHint = document.getElementById("compra-monto-hint");
   const compraTagsChecklist = document.getElementById("compra-tags-checklist");
   const newCompraTagName = document.getElementById("new-compra-tag-name");
   const btnAddCompraTag = document.getElementById("btn-add-compra-tag");
   const compraTrackingsList = document.getElementById("compra-trackings-list");
   const btnAddTracking = document.getElementById("btn-add-tracking");
+  const compraTrackingsCount = document.getElementById("compra-trackings-count");
+  const modalTabBtns = document.querySelectorAll(".modal-tab-btn");
+  const modalTabPanels = document.querySelectorAll(".modal-tab-panel");
+
+  modalTabBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      modalTabBtns.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      modalTabPanels.forEach((p) => p.classList.toggle("hidden", p.dataset.tabPanel !== btn.dataset.tab));
+    });
+  });
+
+  function resetModalTabs() {
+    modalTabBtns.forEach((b, i) => b.classList.toggle("active", i === 0));
+    modalTabPanels.forEach((p, i) => p.classList.toggle("hidden", i !== 0));
+  }
+
+  function updateTrackingsCount() {
+    const n = compraTrackingsList.querySelectorAll(".compra-tracking-row").length;
+    compraTrackingsCount.textContent = n > 0 ? "(" + n + ")" : "";
+  }
 
   let selectedEmailId = null;
 
@@ -219,6 +241,7 @@ document.addEventListener("DOMContentLoaded", () => {
       ' &nbsp; <b>Correo:</b> ' +
       escapeHtml(r.correo || "—") +
       "</div>" +
+      (r.descripcion ? '<div class="compra-registro-descripcion">' + escapeHtml(r.descripcion) + "</div>" : "") +
       '<div class="compra-tiendas-lines">' +
       tiendaLines +
       "</div>" +
@@ -410,12 +433,16 @@ document.addEventListener("DOMContentLoaded", () => {
         row.querySelector(".compra-tracking-precio").value = existing.precio;
       }
     }
+    updateTrackingsCount();
     return row;
   }
 
   compraTrackingsList.addEventListener("click", (e) => {
     const removeBtn = e.target.closest(".btn-remove-tracking");
-    if (removeBtn) removeBtn.closest(".compra-tracking-row").remove();
+    if (removeBtn) {
+      removeBtn.closest(".compra-tracking-row").remove();
+      updateTrackingsCount();
+    }
   });
 
   if (btnAddTracking) {
@@ -441,10 +468,12 @@ document.addEventListener("DOMContentLoaded", () => {
     btnSubmitCompra.textContent = existing ? "Guardar cambios" : "Guardar compra";
     compraCorreoField.value = existing ? existing.correo : "";
     compraTarjetaField.value = existing ? existing.tarjeta || "" : "";
+    compraDescripcionField.value = existing ? existing.descripcion || "" : "";
     newCompraTagName.value = "";
     compraMontoGroups.innerHTML = "";
     compraTrackingsList.innerHTML = "";
     compraTagsChecklist.querySelectorAll(".tag-card").forEach((c) => c.classList.remove("selected"));
+    resetModalTabs();
 
     if (existing) {
       existing.tiendas.forEach((t) => {
@@ -459,6 +488,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       (existing.trackings || []).forEach((t) => addTrackingRow(t));
     }
+    updateTrackingsCount();
     updateMontoPlaceholder();
     modalAddCompra.classList.remove("hidden");
   }
@@ -528,6 +558,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
       const tarjeta = compraTarjetaField.value.trim();
+      const descripcion = compraDescripcionField.value.trim();
       const groups = Array.from(compraMontoGroups.querySelectorAll(".compra-monto-group"));
       if (!groups.length) {
         showToast("Elige al menos una tienda.");
@@ -541,7 +572,7 @@ document.addEventListener("DOMContentLoaded", () => {
         montos: collectGroupMontos(group).join(","),
       }));
       const trackings = collectTrackings();
-      const payload = { compra_email_id: selectedEmailId, correo, tarjeta, tiendas, trackings };
+      const payload = { compra_email_id: selectedEmailId, correo, tarjeta, descripcion, tiendas, trackings };
       const url = editingRegistroId ? `/compras/registros/${editingRegistroId}` : "/compras/registros";
 
       apiFetch(url, {

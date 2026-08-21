@@ -47,6 +47,7 @@ type RegistroWithTiendas = {
   compra_email_id: number;
   correo: string;
   tarjeta: string | null;
+  descripcion: string | null;
   created_at: string;
   tiendas: TiendaGroup[];
   trackings: TrackingEntry[];
@@ -140,7 +141,7 @@ function getTrackingsForRegistro(registroId: number): TrackingEntry[] {
 
 function getRegistroWithTiendas(id: number | bigint): RegistroWithTiendas {
   const base = db
-    .prepare("SELECT id, compra_email_id, correo, tarjeta, created_at FROM compra_registros WHERE id = ?")
+    .prepare("SELECT id, compra_email_id, correo, tarjeta, descripcion, created_at FROM compra_registros WHERE id = ?")
     .get(id) as Omit<RegistroWithTiendas, "tiendas" | "trackings">;
   return { ...base, tiendas: getTiendasForRegistro(Number(id)), trackings: getTrackingsForRegistro(Number(id)) };
 }
@@ -155,7 +156,7 @@ router.get("/compras/emails/:id/registros", (req, res) => {
   }
   const base = db
     .prepare(
-      `SELECT id, compra_email_id, correo, tarjeta, created_at
+      `SELECT id, compra_email_id, correo, tarjeta, descripcion, created_at
        FROM compra_registros WHERE compra_email_id = ? ORDER BY created_at DESC`
     )
     .all(email.id) as Omit<RegistroWithTiendas, "tiendas" | "trackings">[];
@@ -175,12 +176,14 @@ function parseRegistroBody(
 ): {
   correo: string;
   tarjeta: string | null;
+  descripcion: string | null;
   tiendas: { tagId: number; montos: string | null }[];
   trackings: { numeroTracking: string; precio: number | null; articulo: string | null }[];
 } | null {
   const body = req.body as {
     correo?: string;
     tarjeta?: string;
+    descripcion?: string;
     tiendas?: { tag_id?: string | number; montos?: string }[];
     trackings?: { numero_tracking?: string; precio?: string | number; articulo?: string }[];
   };
@@ -207,6 +210,7 @@ function parseRegistroBody(
     return null;
   }
   const tarjeta = (body.tarjeta || "").trim() || null;
+  const descripcion = (body.descripcion || "").trim() || null;
 
   const rawTrackings = Array.isArray(body.trackings) ? body.trackings : [];
   const trackings: { numeroTracking: string; precio: number | null; articulo: string | null }[] = [];
@@ -219,7 +223,7 @@ function parseRegistroBody(
     trackings.push({ numeroTracking, precio, articulo });
   }
 
-  return { correo, tarjeta, tiendas, trackings };
+  return { correo, tarjeta, descripcion, tiendas, trackings };
 }
 
 router.post("/compras/registros", (req, res) => {
@@ -232,8 +236,10 @@ router.post("/compras/registros", (req, res) => {
   if (!parsed) return;
 
   const info = db
-    .prepare("INSERT INTO compra_registros (user_id, compra_email_id, correo, tarjeta) VALUES (?, ?, ?, ?)")
-    .run(req.user!.id, email.id, parsed.correo, parsed.tarjeta);
+    .prepare(
+      "INSERT INTO compra_registros (user_id, compra_email_id, correo, tarjeta, descripcion) VALUES (?, ?, ?, ?, ?)"
+    )
+    .run(req.user!.id, email.id, parsed.correo, parsed.tarjeta, parsed.descripcion);
   const registroId = Number(info.lastInsertRowid);
   const insertTienda = db.prepare(
     "INSERT INTO compra_registro_tiendas (compra_registro_id, tag_id, montos) VALUES (?, ?, ?)"
@@ -258,9 +264,10 @@ router.post("/compras/registros/:id", (req, res) => {
   const parsed = parseRegistroBody(req, res);
   if (!parsed) return;
 
-  db.prepare("UPDATE compra_registros SET correo = ?, tarjeta = ? WHERE id = ?").run(
+  db.prepare("UPDATE compra_registros SET correo = ?, tarjeta = ?, descripcion = ? WHERE id = ?").run(
     parsed.correo,
     parsed.tarjeta,
+    parsed.descripcion,
     existing.id
   );
   db.prepare("DELETE FROM compra_registro_tiendas WHERE compra_registro_id = ?").run(existing.id);

@@ -488,6 +488,26 @@ button.link:hover { background: none; color: var(--accent-dark); }
 .email-tags { display: flex; gap: 6px; flex-wrap: nowrap; overflow: hidden; }
 .btn-copy.copied { color: var(--accent); }
 
+/* ---------- Pestañas dentro de un modal (ej. Compras: Detalles/Trackings) ---------- */
+.modal-tabs { display: flex; gap: 4px; border-bottom: 1.5px solid var(--border); margin-top: 8px; }
+.modal-tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 8px 4px;
+  margin-right: 18px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted);
+  min-height: auto;
+  width: auto;
+}
+.modal-tab-btn.active { color: var(--accent-dark); border-bottom-color: var(--accent); }
+.modal-tab-btn:hover { background: none; }
+.modal-tab-count { color: inherit; }
+.modal-tab-panel.hidden { display: none; }
+
 /* ---------- Compras: correos (izquierda) + registro (derecha) ---------- */
 .compras-layout { display: flex; gap: 18px; align-items: flex-start; }
 
@@ -575,6 +595,7 @@ button.link:hover { background: none; color: var(--accent-dark); }
 }
 .compra-registro-card:hover { border-color: var(--accent); }
 .compra-registro-top { margin-bottom: 5px; font-size: 0.72rem; }
+.compra-registro-descripcion { font-weight: 700; font-size: 0.78rem; margin-bottom: 5px; }
 .compra-tiendas-lines { display: flex; flex-direction: column; gap: 2px; margin-bottom: 5px; }
 .compra-tienda-line { font-size: 0.72rem; }
 .compra-tienda-line b { color: var(--accent-dark); }

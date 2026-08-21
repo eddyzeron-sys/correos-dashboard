@@ -107,6 +107,7 @@ db.exec(`
     tag_id INTEGER REFERENCES compra_tags(id) ON DELETE SET NULL,
     monto REAL,
     montos TEXT,
+    descripcion TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -298,6 +299,12 @@ if (tableExists("compra_registros") && !columnExists("compra_registros", "montos
   );
 }
 
+// Descripción libre del artículo comprado (ej. "Amazon Echo"), una sola por
+// tarjeta — independiente de cuántas tiendas/montos/trackings tenga.
+if (tableExists("compra_registros") && !columnExists("compra_registros", "descripcion")) {
+  db.exec("ALTER TABLE compra_registros ADD COLUMN descripcion TEXT;");
+}
+
 // Una compra ahora puede tener varias tiendas dentro de una sola tarjeta
 // (compra_registro_tiendas). Las filas viejas de compra_registros (una por
 // tienda) se migran una sola vez a esa tabla hija, conservando cada tienda
@@ -422,6 +429,7 @@ export interface CompraRegistroRow {
   tarjeta: string | null;
   tag_id: number | null;
   montos: string | null;
+  descripcion: string | null;
   created_at: string;
 }
 
