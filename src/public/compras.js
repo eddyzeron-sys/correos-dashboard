@@ -331,18 +331,16 @@ document.addEventListener("DOMContentLoaded", () => {
       r.trackings && r.trackings.length
         ? '<div class="compra-enviado-badge">📦 Enviado</div>'
         : "";
-    // Foto del producto, si tiene — ahora ocupa todo el alto del bloque de
-    // texto (de la línea Tarjeta/Correo hasta el último tracking), no solo
-    // una miniatura de la primera línea.
+    // Foto del producto, si tiene — pegada al borde derecho de toda la
+    // tarjeta, estirada de arriba a abajo (no solo del bloque de texto).
     const thumbHtml = r.imagen ? '<img class="compra-registro-thumb" src="' + r.imagen + '" alt="" />' : "";
     return (
       '<div class="compra-registro-card" data-id="' + r.id + '">' +
       '<button type="button" class="btn-remove-registro" data-id="' + r.id + '" title="Eliminar">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
       '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>' +
+      '<div class="compra-registro-main">' +
       enviadoBadge +
-      '<div class="compra-registro-body">' +
-      '<div class="compra-registro-text">' +
       '<div class="compra-registro-top"><b>Tarjeta:</b> ' +
       (r.tarjeta ? escapeHtml(r.tarjeta) : "—") +
       ' &nbsp; <b>Correo:</b> ' +
@@ -355,7 +353,6 @@ document.addEventListener("DOMContentLoaded", () => {
       trackingLines +
       "</div>" +
       thumbHtml +
-      "</div>" +
       "</div>"
     );
   }

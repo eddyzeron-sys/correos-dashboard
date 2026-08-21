@@ -614,16 +614,14 @@ button.link:hover { background: none; color: var(--accent-dark); }
   background: #fff;
 }
 
-/* Foto en la tarjeta de "Registro de compras" — a la derecha, estirada al
-   alto de todo el bloque de texto (Tarjeta/Correo hasta el tracking). */
-.compra-registro-body { display: flex; align-items: stretch; gap: 10px; }
-.compra-registro-text { flex: 1; min-width: 0; }
+/* Foto en la tarjeta de "Registro de compras" — pegada al borde derecho de
+   toda la tarjeta, de arriba a abajo (el overflow:hidden + border-radius
+   de .compra-registro-card la recorta a las esquinas redondeadas). */
 .compra-registro-thumb {
-  width: 64px;
-  border-radius: 8px;
-  object-fit: cover;
+  width: 90px;
   flex-shrink: 0;
-  align-self: stretch;
+  object-fit: cover;
+  display: block;
 }
 
 /* ---------- Productos enviados (galería con foto) ---------- */
@@ -670,6 +668,13 @@ button.link:hover { background: none; color: var(--accent-dark); }
 
 /* Tarjeta de información de un producto enviado (solo lectura) */
 .producto-info-card { max-width: 380px; }
+/* La foto llega casi hasta el borde de la tarjeta — la X necesita su
+   propio fondo para verse bien encima de cualquier foto. */
+.producto-info-card .modal-close-btn {
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 1px 4px rgba(20, 15, 45, 0.25);
+}
+.producto-info-card .modal-close-btn:hover { background: #fff; }
 .producto-info-img {
   width: 100%;
   aspect-ratio: 1 / 1;
@@ -812,11 +817,14 @@ button.link:hover { background: none; color: var(--accent-dark); }
   background: #fff;
   border: 1.5px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 10px 40px 10px 14px;
   cursor: pointer;
   transition: border-color 0.15s ease;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
 }
 .compra-registro-card:hover { border-color: var(--accent); }
+.compra-registro-main { flex: 1; min-width: 0; padding: 10px 34px 10px 14px; }
 .compra-enviado-badge {
   display: inline-flex;
   align-items: center;
@@ -843,17 +851,19 @@ button.link:hover { background: none; color: var(--accent-dark); }
 #btn-add-tracking { font-size: 0.78rem; margin-top: 8px; }
 .btn-remove-registro {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 26px;
-  height: 26px;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
   min-height: auto;
   padding: 0;
   border-radius: 50%;
-  background: var(--surface-muted);
-  color: var(--muted);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--text);
+  box-shadow: 0 1px 4px rgba(20, 15, 45, 0.25);
+  z-index: 2;
 }
-.btn-remove-registro:hover { background: var(--danger-bg); color: var(--danger-text); }
+.btn-remove-registro:hover { background: #fff; color: var(--danger-text); }
 
 .new-mail-badge {
   display: inline-flex;
