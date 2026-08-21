@@ -156,9 +156,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const formAddCompra = document.getElementById("form-add-compra");
   const compraCorreoField = document.getElementById("compra-correo-field");
   const compraTarjetaField = document.getElementById("compra-tarjeta-field");
-  const compraMontosList = document.getElementById("compra-montos-list");
   const compraMontoHint = document.getElementById("compra-monto-hint");
-  const compraMontoMultiHint = document.getElementById("compra-monto-multi-hint");
   const compraTagsChecklist = document.getElementById("compra-tags-checklist");
   const newCompraTagName = document.getElementById("new-compra-tag-name");
   const btnAddCompraTag = document.getElementById("btn-add-compra-tag");
@@ -277,83 +275,109 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // ---------- Modal "Agregar/editar compra" ----------
+  // Al crear: la tienda es multi-selección — cada tienda elegida tiene su
+  // propio grupo de "cantidad gastada" (con su propio "+" para sumar varias
+  // cantidades DENTRO de esa tienda), y al guardar se crea una compra por
+  // cada tienda. Al editar una compra ya existente, es solo una tienda fija.
+  const compraMontoGroups = document.getElementById("compra-monto-groups");
   const modalTitle = document.getElementById("modal-add-compra-title");
   const btnSubmitCompra = document.getElementById("btn-submit-compra");
   let editingRegistroId = null;
 
-  // El monto no se puede tocar hasta elegir la tienda primero.
-  function updateMontoLock() {
-    const hasTag = !!compraTagsChecklist.querySelector(".tag-card.selected");
-    compraMontosList.querySelectorAll(".compra-monto-input").forEach((input) => {
-      input.disabled = !hasTag;
-      if (!hasTag) input.value = "";
-    });
-    if (compraMontoHint) compraMontoHint.style.display = hasTag ? "none" : "";
-    updateMontoTotal();
-  }
-
-  function montoRowHtml() {
+  function montoRowHtml(mode) {
+    let btnHtml = "";
+    if (mode === "add") {
+      btnHtml =
+        '<button type="button" class="icon-action btn-add-monto-in-group" title="Sumar otra cantidad a esta tienda">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+        '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>';
+    } else if (mode === "remove") {
+      btnHtml =
+        '<button type="button" class="icon-action danger-hover btn-remove-monto-in-group" title="Quitar esta cantidad">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+        '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>';
+    }
     return (
       '<div class="row compra-monto-row">' +
       '<span class="muted" style="font-weight:700;">$</span>' +
       '<input type="number" class="compra-monto-input" step="0.01" min="0" placeholder="0.00" />' +
-      '<button type="button" class="icon-action danger-hover btn-remove-monto" title="Quitar esta cantidad">' +
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
-      '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>' +
+      btnHtml +
       "</div>"
     );
   }
 
-  function resetMontosList() {
-    compraMontosList.innerHTML =
-      '<div class="row compra-monto-row">' +
-      '<span class="muted" style="font-weight:700;">$</span>' +
-      '<input type="number" class="compra-monto-input" step="0.01" min="0" placeholder="0.00" disabled />' +
-      '<button type="button" class="icon-action btn-add-monto" title="Sumar otra cantidad al total">' +
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
-      '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>' +
-      "</div>";
-    updateMontoTotal();
-  }
-
-  function sumMontos() {
-    const values = Array.from(compraMontosList.querySelectorAll(".compra-monto-input"))
+  function sumGroupMontos(group) {
+    const values = Array.from(group.querySelectorAll(".compra-monto-input"))
       .map((i) => parseFloat(i.value))
       .filter((v) => !Number.isNaN(v));
     return values.length ? values.reduce((a, b) => a + b, 0) : null;
   }
 
-  const compraMontoTotal = document.getElementById("compra-monto-total");
-  function updateMontoTotal() {
-    if (!compraMontoTotal) return;
-    const rows = compraMontosList.querySelectorAll(".compra-monto-row").length;
-    const total = sumMontos();
+  function updateGroupTotal(group) {
+    let totalLine = group.querySelector(".compra-monto-total-line");
+    const rows = group.querySelectorAll(".compra-monto-row").length;
+    const total = sumGroupMontos(group);
     if (rows > 1 && total !== null) {
-      compraMontoTotal.textContent = "Total: $" + total.toFixed(2);
-      compraMontoTotal.style.display = "";
-    } else {
-      compraMontoTotal.style.display = "none";
+      if (!totalLine) {
+        totalLine = document.createElement("div");
+        totalLine.className = "compra-monto-total-line";
+        group.appendChild(totalLine);
+      }
+      totalLine.textContent = "Total " + group.dataset.tagName + ": $" + total.toFixed(2);
+    } else if (totalLine) {
+      totalLine.remove();
     }
   }
 
-  // Clic en "+" agrega otra fila de cantidad — todas suman al monto de esta
-  // misma compra (una sola tarjeta), no crean compras separadas. La "x" de
-  // una fila la quita de la suma.
-  compraMontosList.addEventListener("click", (e) => {
-    if (e.target.closest(".btn-add-monto")) {
-      compraMontosList.insertAdjacentHTML("beforeend", montoRowHtml());
-      if (compraMontoMultiHint) compraMontoMultiHint.style.display = "";
-      updateMontoTotal();
+  function updateMontoPlaceholder() {
+    const hasGroups = compraMontoGroups.children.length > 0;
+    if (compraMontoHint) compraMontoHint.style.display = hasGroups ? "none" : "";
+  }
+
+  // singleMode true = modo editar (una sola tienda, sin +/-, prellenado).
+  function addMontoGroup(tagId, tagName, singleMode, existingMonto) {
+    const div = document.createElement("div");
+    div.className = "compra-monto-group";
+    div.dataset.tagId = tagId;
+    div.dataset.tagName = tagName;
+    div.innerHTML =
+      '<div class="compra-monto-group-header"><span>' +
+      escapeHtml(tagName) +
+      '</span></div><div class="compra-monto-rows">' +
+      montoRowHtml(singleMode ? "none" : "add") +
+      "</div>";
+    compraMontoGroups.appendChild(div);
+    if (existingMonto !== undefined && existingMonto !== null && existingMonto !== "") {
+      div.querySelector(".compra-monto-input").value = existingMonto;
+    }
+    updateMontoPlaceholder();
+    return div;
+  }
+
+  function removeMontoGroup(tagId) {
+    const group = compraMontoGroups.querySelector('.compra-monto-group[data-tag-id="' + tagId + '"]');
+    if (group) group.remove();
+    updateMontoPlaceholder();
+  }
+
+  compraMontoGroups.addEventListener("click", (e) => {
+    const addBtn = e.target.closest(".btn-add-monto-in-group");
+    if (addBtn) {
+      addBtn.closest(".compra-monto-rows").insertAdjacentHTML("beforeend", montoRowHtml("remove"));
+      updateGroupTotal(addBtn.closest(".compra-monto-group"));
       return;
     }
-    const removeBtn = e.target.closest(".btn-remove-monto");
+    const removeBtn = e.target.closest(".btn-remove-monto-in-group");
     if (removeBtn) {
+      const group = removeBtn.closest(".compra-monto-group");
       removeBtn.closest(".compra-monto-row").remove();
-      updateMontoTotal();
+      updateGroupTotal(group);
     }
   });
-  compraMontosList.addEventListener("input", (e) => {
-    if (e.target.classList.contains("compra-monto-input")) updateMontoTotal();
+  compraMontoGroups.addEventListener("input", (e) => {
+    if (e.target.classList.contains("compra-monto-input")) {
+      updateGroupTotal(e.target.closest(".compra-monto-group"));
+    }
   });
 
   // existing === null → modo agregar. existing === {id, tag_id, tarjeta, monto, correo} → modo editar.
@@ -364,27 +388,45 @@ document.addEventListener("DOMContentLoaded", () => {
     compraCorreoField.value = existing ? existing.correo : "";
     compraTarjetaField.value = existing ? existing.tarjeta : "";
     newCompraTagName.value = "";
-    compraTagsChecklist.querySelectorAll(".tag-card").forEach((c) => {
-      c.classList.toggle("selected", existing && String(c.dataset.tagId) === String(existing.tag_id));
-    });
-    resetMontosList();
-    // Al editar una compra ya existente no tiene sentido partirla en varias —
-    // el "+" de agregar otra cantidad solo aplica al crear.
-    const addBtn = compraMontosList.querySelector(".btn-add-monto");
-    if (addBtn) addBtn.style.display = existing ? "none" : "";
-    if (compraMontoMultiHint) compraMontoMultiHint.style.display = "none";
-    updateMontoLock();
-    compraMontosList.querySelector(".compra-monto-input").value = existing ? existing.monto : "";
+    compraMontoGroups.innerHTML = "";
+    compraTagsChecklist.querySelectorAll(".tag-card").forEach((c) => c.classList.remove("selected"));
+
+    if (existing) {
+      const card = compraTagsChecklist.querySelector('.tag-card[data-tag-id="' + existing.tag_id + '"]');
+      if (card) {
+        card.classList.add("selected");
+        addMontoGroup(existing.tag_id, card.querySelector(".tag-card-name").textContent.trim(), true, existing.monto);
+      }
+    }
+    updateMontoPlaceholder();
     modalAddCompra.classList.remove("hidden");
   }
 
   compraTagsChecklist.addEventListener("click", (e) => {
     const card = e.target.closest(".tag-card");
     if (!card) return;
-    const alreadySelected = card.classList.contains("selected");
-    compraTagsChecklist.querySelectorAll(".tag-card").forEach((c) => c.classList.remove("selected"));
-    if (!alreadySelected) card.classList.add("selected");
-    updateMontoLock();
+    const tagId = card.dataset.tagId;
+    const tagName = card.querySelector(".tag-card-name").textContent.trim();
+
+    if (editingRegistroId) {
+      // Editar: una sola tienda a la vez, cambiarla reemplaza la anterior.
+      compraTagsChecklist.querySelectorAll(".tag-card").forEach((c) => c.classList.remove("selected"));
+      card.classList.add("selected");
+      compraMontoGroups.innerHTML = "";
+      addMontoGroup(tagId, tagName, true, null);
+      return;
+    }
+
+    // Crear: clic alterna — se pueden elegir varias tiendas a la vez, cada
+    // una con su propio grupo de cantidades, sin perder lo ya escrito en
+    // las demás.
+    const nowSelected = !card.classList.contains("selected");
+    card.classList.toggle("selected", nowSelected);
+    if (nowSelected) {
+      addMontoGroup(tagId, tagName, false);
+    } else {
+      removeMontoGroup(tagId);
+    }
   });
 
   if (btnAddCompraTag) {
@@ -407,15 +449,23 @@ document.addEventListener("DOMContentLoaded", () => {
           }
           const emptyMsg = document.getElementById("compra-tags-empty-msg");
           if (emptyMsg) emptyMsg.remove();
-          compraTagsChecklist.querySelectorAll(".tag-card").forEach((c) => c.classList.remove("selected"));
           compraTagsChecklist.insertAdjacentHTML(
             "beforeend",
-            '<div class="tag-card selected" data-tag-id="' + data.id + '"><span class="tag-card-name">' +
+            '<div class="tag-card" data-tag-id="' + data.id + '"><span class="tag-card-name">' +
               escapeHtml(data.name) +
               "</span></div>"
           );
+          const newCard = compraTagsChecklist.lastElementChild;
+          if (editingRegistroId) {
+            compraTagsChecklist.querySelectorAll(".tag-card").forEach((c) => c.classList.remove("selected"));
+            newCard.classList.add("selected");
+            compraMontoGroups.innerHTML = "";
+            addMontoGroup(data.id, data.name, true, null);
+          } else {
+            newCard.classList.add("selected");
+            addMontoGroup(data.id, data.name, false);
+          }
           newCompraTagName.value = "";
-          updateMontoLock();
         })
         .catch((err) => {
           if (err.message !== "unauthenticated") showToast("No se pudo crear la etiqueta.");
@@ -449,22 +499,28 @@ document.addEventListener("DOMContentLoaded", () => {
     formAddCompra.addEventListener("submit", (e) => {
       e.preventDefault();
       if (!selectedEmailId) return;
-      const selectedTag = compraTagsChecklist.querySelector(".tag-card.selected");
-      if (!selectedTag) {
-        showToast("Elige primero la tienda.");
-        return;
-      }
       const correo = compraCorreoField.value.trim();
       if (!correo) {
         compraCorreoField.focus();
         return;
       }
       const tarjeta = compraTarjetaField.value.trim();
-      const tagId = selectedTag.dataset.tagId;
+      const groups = Array.from(compraMontoGroups.querySelectorAll(".compra-monto-group"));
+      if (!groups.length) {
+        showToast("Elige primero la tienda.");
+        return;
+      }
 
       if (editingRegistroId) {
-        const monto = compraMontosList.querySelector(".compra-monto-input").value;
-        const body = new URLSearchParams({ compra_email_id: selectedEmailId, correo, tarjeta, tag_id: tagId, monto });
+        const group = groups[0];
+        const monto = group.querySelector(".compra-monto-input").value;
+        const body = new URLSearchParams({
+          compra_email_id: selectedEmailId,
+          correo,
+          tarjeta,
+          tag_id: group.dataset.tagId,
+          monto,
+        });
         apiFetch(`/compras/registros/${editingRegistroId}`, { method: "POST", body })
           .then((r) => r.json())
           .then((data) => {
@@ -487,20 +543,23 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      // Modo crear: una sola compra — si se agregaron varias cantidades con
-      // el "+", se suman en un solo monto (misma tienda/correo/tarjeta).
-      const monto = sumMontos();
-      postRegistro(selectedEmailId, correo, tarjeta, tagId, monto)
-        .then((data) => {
-          if (data.error) {
-            showToast(data.error);
+      // Crear: una compra por cada tienda seleccionada, sumando las
+      // cantidades que se hayan puesto dentro de esa tienda.
+      const requests = groups.map((group) =>
+        postRegistro(selectedEmailId, correo, tarjeta, group.dataset.tagId, sumGroupMontos(group))
+      );
+      Promise.all(requests)
+        .then((results) => {
+          const errored = results.find((r) => r.error);
+          if (errored) {
+            showToast(errored.error);
             return;
           }
           modalAddCompra.classList.add("hidden");
-          insertRegistroCard(data.registro);
+          results.forEach((r) => insertRegistroCard(r.registro));
           wireRegistroDeleteButtons();
           wireRegistroCardClicks();
-          showToast("Compra agregada");
+          showToast(results.length > 1 ? `${results.length} compras agregadas` : "Compra agregada");
         })
         .catch((err) => {
           if (err.message !== "unauthenticated") showToast("No se pudo guardar la compra.");

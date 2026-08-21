@@ -460,6 +460,23 @@ button.link:hover { background: none; color: var(--accent-dark); }
 
 .compra-registros-list { display: flex; flex-direction: column; gap: 10px; }
 
+.compra-monto-group {
+  margin-top: 14px;
+  padding: 12px;
+  background: var(--surface-muted);
+  border-radius: var(--radius-sm);
+}
+.compra-monto-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.compra-monto-group-header span { font-size: 0.78rem; font-weight: 700; }
+.compra-monto-row { margin-top: 6px; }
+.compra-monto-row:first-child { margin-top: 0; }
+.compra-monto-total-line { font-size: 0.78rem; color: var(--accent-dark); font-weight: 700; margin-top: 6px; }
+
 .compra-registro-card {
   position: relative;
   background: #fff;
