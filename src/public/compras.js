@@ -523,8 +523,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Renderiza el panel del correo seleccionado con tres pestañas: Registro
   // de compras, Mis tarjetas y Productos enviados (todas propias de ese
-  // correo).
-  function renderPanel(registros, tarjetas) {
+  // correo). initialTab deja re-render sin perder en qué pestaña estabas
+  // (ej. al guardar una compra desde "Productos enviados").
+  function renderPanel(registros, tarjetas, initialTab) {
+    initialTab = initialTab || "registro";
     registroDataById = new Map();
     // El backend ya entrega los registros ordenados por creación más
     // reciente primero.
@@ -538,14 +540,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const enviadosListHtml = enviados.length
       ? '<div class="productos-enviados-grid">' + enviados.map(productoEnviadoCardHtml).join("") + "</div>"
       : '<div class="list-empty">Todavía no hay productos enviados para este correo.</div>';
+    const activeClass = (tab) => (tab === initialTab ? " active" : "");
 
     comprasPanel.innerHTML =
       '<div class="compras-panel-tabs">' +
-      '<button type="button" class="page-tab-btn active" data-panel-tab="registro">Registro de compras</button>' +
-      '<button type="button" class="page-tab-btn" data-panel-tab="tarjetas">Mis tarjetas</button>' +
-      '<button type="button" class="page-tab-btn" data-panel-tab="enviados">Productos enviados</button>' +
+      '<button type="button" class="page-tab-btn' + activeClass("registro") + '" data-panel-tab="registro">Registro de compras</button>' +
+      '<button type="button" class="page-tab-btn' + activeClass("tarjetas") + '" data-panel-tab="tarjetas">Mis tarjetas</button>' +
+      '<button type="button" class="page-tab-btn' + activeClass("enviados") + '" data-panel-tab="enviados">Productos enviados</button>' +
       "</div>" +
-      '<div class="compras-panel-tab-content active" data-panel-tab-content="registro">' +
+      '<div class="compras-panel-tab-content' + activeClass("registro") + '" data-panel-tab-content="registro">' +
       '<div class="compras-panel-header"><h2>Registro de compras</h2>' +
       '<div class="compras-panel-header-actions">' +
       '<label class="compras-filter-enviados"><input type="checkbox" id="filter-enviados"' +
@@ -557,7 +560,7 @@ document.addEventListener("DOMContentLoaded", () => {
       "</div></div>" +
       registrosListHtml +
       "</div>" +
-      '<div class="compras-panel-tab-content" data-panel-tab-content="tarjetas">' +
+      '<div class="compras-panel-tab-content' + activeClass("tarjetas") + '" data-panel-tab-content="tarjetas">' +
       '<div class="compras-panel-header"><h2>Mis tarjetas</h2>' +
       '<div class="compras-panel-header-actions">' +
       '<label class="compras-filter-enviados"><input type="checkbox" id="filter-sin-usar"' +
@@ -569,7 +572,7 @@ document.addEventListener("DOMContentLoaded", () => {
       "</div></div>" +
       tarjetasListHtml +
       "</div>" +
-      '<div class="compras-panel-tab-content" data-panel-tab-content="enviados">' +
+      '<div class="compras-panel-tab-content' + activeClass("enviados") + '" data-panel-tab-content="enviados">' +
       '<div class="compras-panel-header"><h2>Productos enviados</h2></div>' +
       enviadosListHtml +
       "</div>";
@@ -597,7 +600,7 @@ document.addEventListener("DOMContentLoaded", () => {
     applyTarjetasFilter();
   }
 
-  function loadRegistrosFor(id) {
+  function loadRegistrosFor(id, initialTab) {
     selectedEmailId = id;
     comprasPanel.innerHTML = '<div class="list-empty">Cargando…</div>';
     Promise.all([
@@ -606,11 +609,21 @@ document.addEventListener("DOMContentLoaded", () => {
     ])
       .then(([registrosData, tarjetasData]) => {
         currentTarjetas = tarjetasData.tarjetas || [];
-        renderPanel(registrosData.registros || [], currentTarjetas);
+        renderPanel(registrosData.registros || [], currentTarjetas, initialTab);
       })
       .catch((err) => {
         if (err.message !== "unauthenticated") showToast("No se pudo cargar el registro.");
       });
+  }
+
+  // Recarga el panel del correo actual sin perder de vista en qué pestaña
+  // estaba el usuario (ej. después de guardar una compra desde "Productos
+  // enviados", que de otro modo no se actualizaría hasta reseleccionar el
+  // correo).
+  function reloadCurrentPanel() {
+    if (!selectedEmailId) return;
+    const activeBtn = comprasPanel.querySelector(".compras-panel-tabs .page-tab-btn.active");
+    loadRegistrosFor(selectedEmailId, activeBtn ? activeBtn.dataset.panelTab : "registro");
   }
 
   document.querySelectorAll(".compra-email-card").forEach((card) => {
@@ -991,26 +1004,10 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
           }
           modalAddCompra.classList.add("hidden");
-          if (editingRegistroId) {
-            const existingCard = comprasPanel.querySelector(
-              '.compra-registro-card[data-id="' + editingRegistroId + '"]'
-            );
-            if (existingCard) existingCard.outerHTML = registroCardHtml(data.registro);
-          } else {
-            const emptyState = comprasPanel.querySelector(".list-empty");
-            if (emptyState) {
-              comprasPanel
-                .querySelector(".compras-panel-header")
-                .insertAdjacentHTML("afterend", '<div class="compra-registros-list"></div>');
-              emptyState.remove();
-            }
-            comprasPanel
-              .querySelector(".compra-registros-list")
-              .insertAdjacentHTML("afterbegin", registroCardHtml(data.registro));
-          }
-          wireRegistroDeleteButtons();
-          wireRegistroCardClicks();
-          applyEnviadosFilter();
+          // Recarga completa (en vez de parchear el DOM) para que "Mis
+          // tarjetas" (usada/enviada) y "Productos enviados" siempre
+          // queden al día sin tener que reseleccionar el correo.
+          reloadCurrentPanel();
           showToast(editingRegistroId ? "Compra actualizada" : "Compra agregada");
         })
         .catch((err) => {

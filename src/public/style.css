@@ -577,20 +577,24 @@ button.link:hover { background: none; color: var(--accent-dark); }
   background: var(--surface-muted);
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  gap: 10px;
   position: relative;
   cursor: text;
-  padding: 8px 40px;
+  padding: 8px 40px 8px 14px;
   outline: none;
 }
 .compra-imagen-paste:focus { border-color: var(--accent); }
 #compra-imagen-preview {
-  max-height: 60px;
-  max-width: 100%;
-  border-radius: 6px;
+  max-height: 96px;
+  max-width: 150px;
+  border-radius: 8px;
   object-fit: contain;
+  margin-left: auto;
 }
-#compra-imagen-placeholder { font-size: 0.78rem; text-align: center; }
+#compra-imagen-preview.hidden { display: none; }
+#compra-imagen-placeholder { font-size: 0.78rem; }
+#compra-imagen-placeholder.hidden { display: none; }
 #btn-remove-imagen {
   position: absolute;
   top: 6px;
