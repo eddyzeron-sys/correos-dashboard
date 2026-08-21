@@ -475,7 +475,7 @@ button.link:hover { background: none; color: var(--accent-dark); }
 .compra-monto-group-header span { font-size: 0.78rem; font-weight: 700; }
 .compra-monto-row { margin-top: 6px; }
 .compra-monto-row:first-child { margin-top: 0; }
-.compra-monto-total-line { font-size: 0.78rem; color: var(--accent-dark); font-weight: 700; margin-top: 6px; }
+.compra-monto-group button.link { font-size: 0.78rem; margin-top: 8px; }
 
 .compra-registro-card {
   position: relative;

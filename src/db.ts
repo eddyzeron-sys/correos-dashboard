@@ -103,6 +103,7 @@ db.exec(`
     tarjeta TEXT,
     tag_id INTEGER REFERENCES compra_tags(id) ON DELETE SET NULL,
     monto REAL,
+    montos TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 `);
@@ -250,6 +251,16 @@ if (tableExists("compra_registros") && !columnExists("compra_registros", "correo
   );
 }
 
+// El gasto de una compra ya no es un solo número: se guardan los montos tal
+// cual se ingresaron, separados por coma (ej. "15,59"), sin sumarlos ni
+// partirlos en varias tarjetas — así se listan uno por uno al mostrarlos.
+if (tableExists("compra_registros") && !columnExists("compra_registros", "montos")) {
+  db.exec("ALTER TABLE compra_registros ADD COLUMN montos TEXT;");
+  db.exec(
+    `UPDATE compra_registros SET montos = CAST(monto AS TEXT) WHERE monto IS NOT NULL AND montos IS NULL`
+  );
+}
+
 // Cualquier usuario ya existente que todavía no tenga etiquetas (por ejemplo
 // el admin de antes de que existiera esta función) recibe las de ejemplo.
 function backfillDefaultTags(): void {
@@ -352,7 +363,7 @@ export interface CompraRegistroRow {
   correo: string;
   tarjeta: string | null;
   tag_id: number | null;
-  monto: number | null;
+  montos: string | null;
   created_at: string;
 }
 

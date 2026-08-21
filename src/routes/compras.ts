@@ -34,7 +34,7 @@ type RegistroWithTag = {
   compra_email_id: number;
   correo: string;
   tarjeta: string | null;
-  monto: number | null;
+  montos: string | null;
   created_at: string;
   tag_id: number | null;
   tag_name: string | null;
@@ -112,7 +112,7 @@ router.get("/compras/emails/:id/registros", (req, res) => {
   }
   const registros = db
     .prepare(
-      `SELECT r.id, r.compra_email_id, r.correo, r.tarjeta, r.monto, r.created_at, r.tag_id, t.name as tag_name
+      `SELECT r.id, r.compra_email_id, r.correo, r.tarjeta, r.montos, r.created_at, r.tag_id, t.name as tag_name
        FROM compra_registros r
        LEFT JOIN compra_tags t ON t.id = r.tag_id
        WHERE r.compra_email_id = ?
@@ -125,7 +125,7 @@ router.get("/compras/emails/:id/registros", (req, res) => {
 function getRegistroWithTag(id: number | bigint): RegistroWithTag {
   return db
     .prepare(
-      `SELECT r.id, r.compra_email_id, r.correo, r.tarjeta, r.monto, r.created_at, r.tag_id, t.name as tag_name
+      `SELECT r.id, r.compra_email_id, r.correo, r.tarjeta, r.montos, r.created_at, r.tag_id, t.name as tag_name
        FROM compra_registros r
        LEFT JOIN compra_tags t ON t.id = r.tag_id
        WHERE r.id = ?`
@@ -138,7 +138,7 @@ function getRegistroWithTag(id: number | bigint): RegistroWithTag {
 function parseRegistroBody(
   req: Request,
   res: import("express").Response
-): { correo: string; tarjeta: string | null; tagId: number; monto: number | null } | null {
+): { correo: string; tarjeta: string | null; tagId: number; montos: string | null } | null {
   const body = req.body as Record<string, string>;
   const correo = (body.correo || "").trim();
   if (!correo) {
@@ -152,9 +152,14 @@ function parseRegistroBody(
     return null;
   }
   const tarjeta = (body.tarjeta || "").trim() || null;
-  const montoNum = body.monto ? Number(body.monto) : null;
-  const monto = montoNum !== null && !Number.isNaN(montoNum) ? montoNum : null;
-  return { correo, tarjeta, tagId: tag.id, monto };
+  // Los montos se guardan tal cual se ingresaron, separados por coma — sin
+  // sumarlos. Ej. "15,59" queda como "Depop: $15, $59" al mostrarse.
+  const montosRaw = (body.montos || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s !== "" && !Number.isNaN(Number(s)));
+  const montos = montosRaw.length ? montosRaw.join(",") : null;
+  return { correo, tarjeta, tagId: tag.id, montos };
 }
 
 router.post("/compras/registros", (req, res) => {
@@ -168,9 +173,9 @@ router.post("/compras/registros", (req, res) => {
 
   const info = db
     .prepare(
-      "INSERT INTO compra_registros (user_id, compra_email_id, correo, tarjeta, tag_id, monto) VALUES (?, ?, ?, ?, ?, ?)"
+      "INSERT INTO compra_registros (user_id, compra_email_id, correo, tarjeta, tag_id, montos) VALUES (?, ?, ?, ?, ?, ?)"
     )
-    .run(req.user!.id, email.id, parsed.correo, parsed.tarjeta, parsed.tagId, parsed.monto);
+    .run(req.user!.id, email.id, parsed.correo, parsed.tarjeta, parsed.tagId, parsed.montos);
 
   res.json({ registro: getRegistroWithTag(info.lastInsertRowid) });
 });
@@ -186,11 +191,11 @@ router.post("/compras/registros/:id", (req, res) => {
   const parsed = parseRegistroBody(req, res);
   if (!parsed) return;
 
-  db.prepare("UPDATE compra_registros SET correo = ?, tarjeta = ?, tag_id = ?, monto = ? WHERE id = ?").run(
+  db.prepare("UPDATE compra_registros SET correo = ?, tarjeta = ?, tag_id = ?, montos = ? WHERE id = ?").run(
     parsed.correo,
     parsed.tarjeta,
     parsed.tagId,
-    parsed.monto,
+    parsed.montos,
     existing.id
   );
 
