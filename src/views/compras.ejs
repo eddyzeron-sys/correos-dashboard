@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <title>Compras</title>
+  <%- include('partials/head') %>
+</head>
+<body>
+  <div class="shell-wrap">
+    <div class="app-shell">
+      <%- include('partials/sidebar', { activeNav: 'compras' }) %>
+      <main class="app-main">
+        <header class="topbar">
+          <div></div>
+          <div class="header-actions"></div>
+        </header>
+
+        <% if (error) { %>
+          <p class="error"><%= error %></p>
+        <% } %>
+
+        <div class="list" id="compras-list">
+          <div class="list-empty">Todavía no hay compras registradas.</div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Aviso flotante (toast) -->
+  <div id="toast" class="toast"></div>
+
+  <script src="/compras.js"></script>
+</body>
+</html>
