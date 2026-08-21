@@ -86,6 +86,24 @@ db.exec(`
     email TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS compra_tags (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (user_id, name)
+  );
+
+  CREATE TABLE IF NOT EXISTS compra_registros (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    compra_email_id INTEGER NOT NULL REFERENCES compra_emails(id) ON DELETE CASCADE,
+    tarjeta TEXT,
+    tag_id INTEGER REFERENCES compra_tags(id) ON DELETE SET NULL,
+    monto REAL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `);
 
 function tableExists(name: string): boolean {
@@ -306,6 +324,23 @@ export interface CompraEmailRow {
   id: number;
   user_id: number;
   email: string;
+  created_at: string;
+}
+
+export interface CompraTagRow {
+  id: number;
+  user_id: number;
+  name: string;
+  created_at: string;
+}
+
+export interface CompraRegistroRow {
+  id: number;
+  user_id: number;
+  compra_email_id: number;
+  tarjeta: string | null;
+  tag_id: number | null;
+  monto: number | null;
   created_at: string;
 }
 

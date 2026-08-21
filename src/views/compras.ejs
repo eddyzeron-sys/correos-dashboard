@@ -11,14 +11,7 @@
       <main class="app-main">
         <header class="topbar">
           <div></div>
-          <div class="header-actions">
-            <button id="btn-add-email" class="btn-cta btn-icon-only" title="Agregar correo">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-            </button>
-          </div>
+          <div class="header-actions"></div>
         </header>
 
         <% if (error) { %>
@@ -26,30 +19,41 @@
         <% } %>
 
         <div class="compras-layout">
-          <aside class="compras-sidebar" id="compras-emails-list">
-            <% if (!emails.length) { %>
-              <div class="list-empty">Todavía no hay correos registrados.</div>
-            <% } %>
-            <% emails.forEach(function(e) { %>
-              <div class="compra-email-card" data-id="<%= e.id %>" data-email="<%= e.email %>">
-                <span class="compra-email-text"><%= e.email %></span>
-                <div class="icon-actions-group">
-                  <button type="button" class="icon-action btn-edit-email" title="Editar" data-id="<%= e.id %>" data-email="<%= e.email %>">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M12 20h9"></path>
-                      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
-                    </svg>
-                  </button>
-                  <button type="button" class="icon-action danger-hover btn-delete-email" title="Eliminar" data-id="<%= e.id %>" data-email="<%= e.email %>">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M3 6h18"></path>
-                      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
-                    </svg>
-                  </button>
+          <aside class="compras-sidebar">
+            <div class="compras-sidebar-header">
+              <span class="muted">Correos</span>
+              <button id="btn-add-email" class="btn-cta btn-icon-only" title="Agregar correo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </button>
+            </div>
+            <div id="compras-emails-list">
+              <% if (!emails.length) { %>
+                <div class="list-empty">Todavía no hay correos registrados.</div>
+              <% } %>
+              <% emails.forEach(function(e) { %>
+                <div class="compra-email-card" data-id="<%= e.id %>" data-email="<%= e.email %>">
+                  <span class="compra-email-text"><%= e.email %></span>
+                  <div class="icon-actions-group">
+                    <button type="button" class="icon-action btn-edit-email" title="Editar" data-id="<%= e.id %>" data-email="<%= e.email %>">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 20h9"></path>
+                        <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+                      </svg>
+                    </button>
+                    <button type="button" class="icon-action danger-hover btn-delete-email" title="Eliminar" data-id="<%= e.id %>" data-email="<%= e.email %>">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 6h18"></path>
+                        <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            <% }) %>
+              <% }) %>
+            </div>
           </aside>
 
           <section class="compras-panel" id="compras-panel">
@@ -92,6 +96,46 @@
       <input type="email" id="edit-email-field" required />
       <div class="row mt">
         <button type="submit" class="primary">Guardar</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Modal agregar compra -->
+  <div id="modal-add-compra" class="modal hidden">
+    <form class="card card-wide modal-card" id="form-add-compra">
+      <button type="button" class="icon-action modal-close-btn btn-cancel" title="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+      <h2>Agregar compra <span class="muted" id="add-compra-email-label"></span></h2>
+
+      <label>Tarjeta usada</label>
+      <input type="text" id="compra-tarjeta-field" placeholder="ej. Visa terminada en 1234" />
+
+      <label class="mt">Etiqueta de página</label>
+      <div class="tag-checklist" id="compra-tags-checklist">
+        <% tags.forEach(function(t) { %>
+          <div class="tag-card" data-tag-id="<%= t.id %>">
+            <span class="tag-card-name"><%= t.name %></span>
+          </div>
+        <% }) %>
+      </div>
+      <% if (!tags.length) { %><p class="tag-check-empty" id="compra-tags-empty-msg">No tienes etiquetas todavía.</p><% } %>
+      <div class="row mt">
+        <input type="text" id="new-compra-tag-name" placeholder="Nueva etiqueta, ej. Depop" />
+        <button type="button" id="btn-add-compra-tag">+ Agregar</button>
+      </div>
+
+      <label class="mt">Cantidad gastada</label>
+      <div class="row">
+        <span class="muted" style="font-weight:700;">$</span>
+        <input type="number" id="compra-monto-field" step="0.01" min="0" placeholder="0.00" />
+      </div>
+
+      <div class="row mt">
+        <button type="submit" class="primary">Guardar compra</button>
       </div>
     </form>
   </div>

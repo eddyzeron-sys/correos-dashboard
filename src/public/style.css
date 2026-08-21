@@ -405,12 +405,19 @@ button.link:hover { background: none; color: var(--accent-dark); }
 .compras-layout { display: flex; gap: 18px; align-items: flex-start; }
 
 .compras-sidebar {
-  width: 280px;
+  width: 300px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
+.compras-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px 4px;
+}
+#compras-emails-list { display: flex; flex-direction: column; gap: 8px; }
 
 .compra-email-card {
   display: flex;
@@ -428,10 +435,10 @@ button.link:hover { background: none; color: var(--accent-dark); }
 .compra-email-card.active { background: var(--accent-light); border-color: var(--accent); }
 .compra-email-card .compra-email-text {
   font-weight: 700;
-  font-size: 0.88rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 0.76rem;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  line-height: 1.3;
 }
 .compra-email-card .icon-actions-group { flex-shrink: 0; }
 
@@ -443,8 +450,43 @@ button.link:hover { background: none; color: var(--accent-dark); }
   border-radius: var(--radius-sm);
   padding: 20px;
 }
-.compras-panel-header { margin-bottom: 14px; }
+.compras-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
 .compras-panel-header h2 { margin: 0; font-size: 1.05rem; }
+
+.compra-registros-list { display: flex; flex-direction: column; gap: 10px; }
+
+.compra-registro-card {
+  position: relative;
+  background: #fff;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 40px 14px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  align-items: center;
+}
+.compra-registro-card .field-label { font-size: 0.72rem; color: var(--muted); display: block; }
+.compra-registro-card .field-value { font-weight: 700; font-size: 0.9rem; }
+.compra-registro-card .monto-value { color: var(--accent-dark); }
+.btn-remove-registro {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+  min-height: auto;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--surface-muted);
+  color: var(--muted);
+}
+.btn-remove-registro:hover { background: var(--danger-bg); color: var(--danger-text); }
 
 @media (max-width: 640px) {
   .compras-layout { flex-direction: column; }
