@@ -397,6 +397,7 @@ button.link:hover { background: none; color: var(--accent-dark); }
   max-width: 260px;
 }
 .email-address:hover { text-decoration: underline; }
+.compra-email-text:hover { text-decoration: none; }
 .email-tags { display: flex; gap: 6px; flex-wrap: nowrap; overflow: hidden; }
 .btn-copy.copied { color: var(--accent); }
 

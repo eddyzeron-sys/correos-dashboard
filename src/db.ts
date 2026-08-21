@@ -79,6 +79,13 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE (email_account_id, message_uid)
   );
+
+  CREATE TABLE IF NOT EXISTS compra_emails (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    email TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `);
 
 function tableExists(name: string): boolean {
@@ -292,6 +299,13 @@ export interface TrackingRow {
   tracking_url: string;
   message_date: string | null;
   seen: number;
+  created_at: string;
+}
+
+export interface CompraEmailRow {
+  id: number;
+  user_id: number;
+  email: string;
   created_at: string;
 }
 
