@@ -175,7 +175,12 @@
           <input type="email" id="compra-correo-field" required placeholder="ej. tucorreo@gmail.com" />
 
           <label class="mt">Tarjeta usada</label>
-          <input type="text" id="compra-tarjeta-field" placeholder="ej. Visa terminada en 1234" />
+          <div class="tag-checklist" id="compra-tarjetas-checklist"></div>
+          <p class="tag-check-empty hidden" id="compra-tarjetas-empty-msg">No tienes tarjetas guardadas para este correo todavía.</p>
+          <div class="row mt">
+            <input type="text" id="new-compra-tarjeta-value" placeholder="Nueva tarjeta, ej. Visa terminada en 1234" />
+            <button type="button" id="btn-add-compra-tarjeta">+ Agregar</button>
+          </div>
 
           <label class="mt">Descripción</label>
           <input type="text" id="compra-descripcion-field" placeholder="ej. Amazon Echo" />

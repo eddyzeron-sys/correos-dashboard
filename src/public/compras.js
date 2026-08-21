@@ -162,7 +162,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const modalAddCompra = document.getElementById("modal-add-compra");
   const formAddCompra = document.getElementById("form-add-compra");
   const compraCorreoField = document.getElementById("compra-correo-field");
-  const compraTarjetaField = document.getElementById("compra-tarjeta-field");
+  const compraTarjetasChecklist = document.getElementById("compra-tarjetas-checklist");
+  const compraTarjetasEmptyMsg = document.getElementById("compra-tarjetas-empty-msg");
+  const newCompraTarjetaValue = document.getElementById("new-compra-tarjeta-value");
+  const btnAddCompraTarjeta = document.getElementById("btn-add-compra-tarjeta");
   const compraDescripcionField = document.getElementById("compra-descripcion-field");
   const compraMontoHint = document.getElementById("compra-monto-hint");
   const compraTagsChecklist = document.getElementById("compra-tags-checklist");
@@ -193,6 +196,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   let selectedEmailId = null;
+  // Tarjetas guardadas del correo seleccionado, para poder elegirlas en el
+  // formulario de compra sin tener que pedirlas de nuevo al servidor.
+  let currentTarjetas = [];
 
   function escapeHtml(text) {
     return String(text).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -293,6 +299,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function showComprasPanelEmpty() {
     selectedEmailId = null;
+    currentTarjetas = [];
     comprasPanel.innerHTML = '<div class="list-empty">Selecciona un correo a la izquierda para ver su registro de compras.</div>';
   }
 
@@ -309,9 +316,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ---------- "Mis tarjetas" del correo seleccionado ----------
   function tarjetaCardHtml(t) {
+    const usedBadge = t.used ? '<span class="compra-tarjeta-badge">Usada</span>' : "";
     return (
-      '<div class="compra-tarjeta-card" data-id="' + t.id + '" data-tarjeta="' + escapeHtml(t.tarjeta) + '">' +
-      '<span class="compra-tarjeta-text">' + escapeHtml(t.tarjeta) + "</span>" +
+      '<div class="compra-tarjeta-card" data-id="' + t.id + '" data-tarjeta="' + escapeHtml(t.tarjeta) + '" data-used="' + (t.used ? "1" : "0") + '">' +
+      '<span class="compra-tarjeta-text">' + escapeHtml(t.tarjeta) + usedBadge + "</span>" +
       '<div class="icon-actions-group">' +
       '<button type="button" class="icon-action btn-edit-tarjeta" title="Editar" data-id="' + t.id + '" data-tarjeta="' + escapeHtml(t.tarjeta) + '">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
@@ -322,6 +330,18 @@ document.addEventListener("DOMContentLoaded", () => {
       '<path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg></button>' +
       "</div></div>"
     );
+  }
+
+  // Filtro "Solo sin usar" — se mantiene marcado al cambiar de correo.
+  let onlySinUsar = false;
+
+  function applyTarjetasFilter() {
+    const list = comprasPanel.querySelector(".tarjetas-list");
+    if (!list) return;
+    list.querySelectorAll(".compra-tarjeta-card").forEach((card) => {
+      const used = card.dataset.used === "1";
+      card.style.display = onlySinUsar && used ? "none" : "";
+    });
   }
 
   function wireTarjetaCardButtons() {
@@ -403,10 +423,14 @@ document.addEventListener("DOMContentLoaded", () => {
       "</div>" +
       '<div class="compras-panel-tab-content" data-panel-tab-content="tarjetas">' +
       '<div class="compras-panel-header"><h2>Mis tarjetas</h2>' +
+      '<div class="compras-panel-header-actions">' +
+      '<label class="compras-filter-enviados"><input type="checkbox" id="filter-sin-usar"' +
+      (onlySinUsar ? " checked" : "") +
+      ' /> Solo sin usar</label>' +
       '<button type="button" id="btn-add-tarjeta" class="btn-cta btn-icon-only" title="Agregar tarjeta">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
       '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>' +
-      "</div>" +
+      "</div></div>" +
       tarjetasListHtml +
       "</div>";
 
@@ -415,6 +439,10 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("filter-enviados").addEventListener("change", (e) => {
       onlyEnviados = e.target.checked;
       applyEnviadosFilter();
+    });
+    document.getElementById("filter-sin-usar").addEventListener("change", (e) => {
+      onlySinUsar = e.target.checked;
+      applyTarjetasFilter();
     });
     document.getElementById("btn-add-tarjeta").addEventListener("click", () => {
       addTarjetaField.value = "";
@@ -425,6 +453,7 @@ document.addEventListener("DOMContentLoaded", () => {
     wireRegistroCardClicks();
     wireTarjetaCardButtons();
     applyEnviadosFilter();
+    applyTarjetasFilter();
   }
 
   function loadRegistrosFor(id) {
@@ -435,7 +464,8 @@ document.addEventListener("DOMContentLoaded", () => {
       apiFetch(`/compras/emails/${id}/tarjetas`).then((r) => r.json()),
     ])
       .then(([registrosData, tarjetasData]) => {
-        renderPanel(registrosData.registros || [], tarjetasData.tarjetas || []);
+        currentTarjetas = tarjetasData.tarjetas || [];
+        renderPanel(registrosData.registros || [], currentTarjetas);
       })
       .catch((err) => {
         if (err.message !== "unauthenticated") showToast("No se pudo cargar el registro.");
@@ -597,6 +627,91 @@ document.addEventListener("DOMContentLoaded", () => {
       .filter((t) => t.numero_tracking !== "");
   }
 
+  // ---------- Selector de "Mis tarjetas" dentro del modal de compra ----------
+  function tarjetaChipHtml(tarjeta) {
+    return (
+      '<div class="tag-card" data-tarjeta="' + escapeHtml(tarjeta) + '"><span class="tag-card-name">' +
+      escapeHtml(tarjeta) +
+      "</span></div>"
+    );
+  }
+
+  // Reconstruye el picker con las tarjetas guardadas del correo seleccionado.
+  // Si selectedText no está entre ellas (tarjeta vieja escrita a mano antes
+  // de este cambio), se agrega como opción aparte para no perder el dato.
+  function renderCompraTarjetasChecklist(selectedText) {
+    compraTarjetasChecklist.innerHTML = "";
+    if (selectedText && !currentTarjetas.some((t) => t.tarjeta === selectedText)) {
+      compraTarjetasChecklist.insertAdjacentHTML("beforeend", tarjetaChipHtml(selectedText));
+    }
+    currentTarjetas.forEach((t) => {
+      compraTarjetasChecklist.insertAdjacentHTML("beforeend", tarjetaChipHtml(t.tarjeta));
+    });
+    if (compraTarjetasEmptyMsg) {
+      compraTarjetasEmptyMsg.classList.toggle("hidden", compraTarjetasChecklist.children.length > 0);
+    }
+    if (selectedText) {
+      const card = Array.from(compraTarjetasChecklist.querySelectorAll(".tag-card")).find(
+        (c) => c.dataset.tarjeta === selectedText
+      );
+      if (card) card.classList.add("selected");
+    }
+  }
+
+  function getSelectedTarjetaText() {
+    const card = compraTarjetasChecklist.querySelector(".tag-card.selected");
+    return card ? card.dataset.tarjeta : "";
+  }
+
+  compraTarjetasChecklist.addEventListener("click", (e) => {
+    const card = e.target.closest(".tag-card");
+    if (!card) return;
+    const alreadySelected = card.classList.contains("selected");
+    compraTarjetasChecklist.querySelectorAll(".tag-card").forEach((c) => c.classList.remove("selected"));
+    if (!alreadySelected) card.classList.add("selected");
+  });
+
+  if (btnAddCompraTarjeta) {
+    btnAddCompraTarjeta.addEventListener("click", () => {
+      const value = newCompraTarjetaValue.value.trim();
+      if (!value) {
+        newCompraTarjetaValue.focus();
+        return;
+      }
+      if (!selectedEmailId) return;
+      apiFetch("/compras/tarjetas", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `compra_email_id=${encodeURIComponent(selectedEmailId)}&tarjeta=${encodeURIComponent(value)}`,
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.error) {
+            showToast(data.error);
+            return;
+          }
+          currentTarjetas.unshift(data);
+          compraTarjetasChecklist.querySelectorAll(".tag-card").forEach((c) => c.classList.remove("selected"));
+          compraTarjetasChecklist.insertAdjacentHTML("afterbegin", tarjetaChipHtml(data.tarjeta));
+          compraTarjetasChecklist.firstElementChild.classList.add("selected");
+          if (compraTarjetasEmptyMsg) compraTarjetasEmptyMsg.classList.add("hidden");
+          newCompraTarjetaValue.value = "";
+          // Si la pestaña "Mis tarjetas" ya está en el DOM, se refleja ahí también.
+          const list = comprasPanel.querySelector(".tarjetas-list");
+          if (list) {
+            const emptyState = list.querySelector(".list-empty");
+            if (emptyState) emptyState.remove();
+            list.insertAdjacentHTML("afterbegin", tarjetaCardHtml(data));
+            wireTarjetaCardButtons();
+            applyTarjetasFilter();
+          }
+        })
+        .catch((err) => {
+          if (err.message !== "unauthenticated") showToast("No se pudo agregar la tarjeta.");
+        });
+    });
+  }
+
   // existing === null → modo agregar. existing === {id, correo, tarjeta,
   // tiendas: [{tag_id, tag_name, montos}, ...]} → modo editar. Cada tarjeta
   // de compra es de UNA sola tienda (si compras dos cosas de la misma
@@ -606,7 +721,8 @@ document.addEventListener("DOMContentLoaded", () => {
     modalTitle.textContent = existing ? "Editar compra" : "Agregar compra";
     btnSubmitCompra.textContent = existing ? "Guardar cambios" : "Guardar compra";
     compraCorreoField.value = existing ? existing.correo : "";
-    compraTarjetaField.value = existing ? existing.tarjeta || "" : "";
+    renderCompraTarjetasChecklist(existing ? existing.tarjeta || "" : "");
+    newCompraTarjetaValue.value = "";
     compraDescripcionField.value = existing ? existing.descripcion || "" : "";
     newCompraTagName.value = "";
     compraMontoGroups.innerHTML = "";
@@ -698,7 +814,7 @@ document.addEventListener("DOMContentLoaded", () => {
         compraCorreoField.focus();
         return;
       }
-      const tarjeta = compraTarjetaField.value.trim();
+      const tarjeta = getSelectedTarjetaText();
       const descripcion = compraDescripcionField.value.trim();
       const groups = Array.from(compraMontoGroups.querySelectorAll(".compra-monto-group"));
       if (!groups.length) {

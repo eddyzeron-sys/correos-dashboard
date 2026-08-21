@@ -583,6 +583,21 @@ button.link:hover { background: none; color: var(--accent-dark); }
   font-weight: 700;
   font-size: 0.8rem;
   overflow-wrap: anywhere;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.compra-tarjeta-card[data-used="1"] { background: var(--surface-muted); }
+.compra-tarjeta-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--muted);
+  background: var(--border);
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 .compra-tarjeta-card .icon-actions-group { flex-shrink: 0; }
 
@@ -765,6 +780,7 @@ button.link:hover { background: none; color: var(--accent-dark); }
 /* ---------- Checklist de etiquetas (modal editar/agregar correo) ---------- */
 .tag-checklist { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
 .tag-check-empty { font-size: 0.82rem; color: var(--muted); }
+.tag-check-empty.hidden { display: none; }
 
 .tag-card {
   display: flex;

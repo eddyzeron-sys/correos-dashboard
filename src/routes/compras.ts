@@ -17,10 +17,28 @@ function getOwnEmail(req: Request, id: string): CompraEmailRow | undefined {
     .get(id, req.user!.id) as CompraEmailRow | undefined;
 }
 
-function listTarjetasForEmail(emailId: number): CompraTarjetaRow[] {
+type TarjetaWithUsage = CompraTarjetaRow & { used: number };
+
+// "Usada" = ya existe alguna compra de este correo con ese mismo texto de
+// tarjeta. Las sin usar van primero, las usadas al final.
+function listTarjetasForEmail(emailId: number): TarjetaWithUsage[] {
   return db
-    .prepare("SELECT * FROM compra_tarjetas WHERE compra_email_id = ? ORDER BY created_at DESC")
-    .all(emailId) as unknown as CompraTarjetaRow[];
+    .prepare(
+      `SELECT t.*, EXISTS(
+         SELECT 1 FROM compra_registros r WHERE r.compra_email_id = t.compra_email_id AND r.tarjeta = t.tarjeta
+       ) as used
+       FROM compra_tarjetas t
+       WHERE t.compra_email_id = ?
+       ORDER BY used ASC, t.created_at DESC`
+    )
+    .all(emailId) as unknown as TarjetaWithUsage[];
+}
+
+function tarjetaIsUsed(emailId: number, tarjeta: string): boolean {
+  const row = db
+    .prepare("SELECT EXISTS(SELECT 1 FROM compra_registros WHERE compra_email_id = ? AND tarjeta = ?) as used")
+    .get(emailId, tarjeta) as { used: number };
+  return !!row.used;
 }
 
 function getOwnTarjeta(req: Request, id: string): CompraTarjetaRow | undefined {
@@ -112,8 +130,8 @@ router.post("/compras/emails/:id/delete", (req, res) => {
 });
 
 // "Mis tarjetas" — libreta de tarjetas guardadas dentro del registro de
-// compras de cada correo. Por ahora solo se guardan aquí (CRUD), sin
-// conectarlas todavía al formulario de compra.
+// compras de cada correo. Se puede elegir una desde el formulario de
+// compra (el texto se copia tal cual a compra_registros.tarjeta, sin FK).
 router.get("/compras/emails/:id/tarjetas", (req, res) => {
   const email = getOwnEmail(req, req.params.id);
   if (!email) {
@@ -138,7 +156,7 @@ router.post("/compras/tarjetas", (req, res) => {
   const info = db
     .prepare("INSERT INTO compra_tarjetas (user_id, compra_email_id, tarjeta) VALUES (?, ?, ?)")
     .run(req.user!.id, email.id, tarjeta);
-  res.json({ id: Number(info.lastInsertRowid), tarjeta });
+  res.json({ id: Number(info.lastInsertRowid), tarjeta, used: tarjetaIsUsed(email.id, tarjeta) });
 });
 
 router.post("/compras/tarjetas/:id", (req, res) => {
@@ -153,7 +171,7 @@ router.post("/compras/tarjetas/:id", (req, res) => {
     return;
   }
   db.prepare("UPDATE compra_tarjetas SET tarjeta = ? WHERE id = ?").run(tarjeta, existing.id);
-  res.json({ id: existing.id, tarjeta });
+  res.json({ id: existing.id, tarjeta, used: tarjetaIsUsed(existing.compra_email_id, tarjeta) });
 });
 
 router.post("/compras/tarjetas/:id/delete", (req, res) => {
