@@ -121,7 +121,7 @@
 
       <div class="modal-card-body">
         <div class="modal-tab-panel" data-tab-panel="detalles">
-          <label>Tienda <span class="muted" id="compra-tienda-hint">— puedes elegir varias</span></label>
+          <label>Tienda</label>
           <div class="tag-checklist" id="compra-tags-checklist">
             <% tags.forEach(function(t) { %>
               <div class="tag-card" data-tag-id="<%= t.id %>">
@@ -145,7 +145,7 @@
           <input type="text" id="compra-descripcion-field" placeholder="ej. Amazon Echo" />
 
           <div id="compra-monto-groups"></div>
-          <p class="muted field-hint" id="compra-monto-hint">Elige una o más tiendas arriba para poder poner el gasto de cada una.</p>
+          <p class="muted field-hint" id="compra-monto-hint">Elige la tienda arriba para poder poner el gasto.</p>
         </div>
 
         <div class="modal-tab-panel hidden" data-tab-panel="trackings">

@@ -369,12 +369,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return div;
   }
 
-  function removeMontoGroup(tagId) {
-    const group = compraMontoGroups.querySelector('.compra-monto-group[data-tag-id="' + tagId + '"]');
-    if (group) group.remove();
-    updateMontoPlaceholder();
-  }
-
   // ---------- Trackings dentro de la compra (número, precio, artículo) ----------
   function trackingRowHtml() {
     return (
@@ -424,8 +418,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // existing === null → modo agregar. existing === {id, correo, tarjeta,
-  // tiendas: [{tag_id, tag_name, montos}, ...]} → modo editar, con todas sus
-  // tiendas precargadas y editables juntas (una sola tarjeta para todo).
+  // tiendas: [{tag_id, tag_name, montos}, ...]} → modo editar. Cada tarjeta
+  // de compra es de UNA sola tienda (si compras dos cosas de la misma
+  // tienda, son dos tarjetas separadas, no una con varias tiendas dentro).
   function openCompraModal(existing) {
     editingRegistroId = existing ? existing.id : null;
     modalTitle.textContent = existing ? "Editar compra" : "Agregar compra";
@@ -440,15 +435,17 @@ document.addEventListener("DOMContentLoaded", () => {
     resetModalTabs();
 
     if (existing) {
-      existing.tiendas.forEach((t) => {
+      // Compatibilidad con tarjetas viejas que sí tenían varias tiendas:
+      // al editar solo se conserva la primera (ahora es 1 a 1).
+      const t = existing.tiendas[0];
+      if (t) {
         const card = compraTagsChecklist.querySelector('.tag-card[data-tag-id="' + t.tag_id + '"]');
-        if (!card) return;
-        card.classList.add("selected");
-        // Compatibilidad con datos viejos que sí tenían varios montos por
-        // tienda: al editar solo se conserva el primero (ahora es 1 a 1).
-        const firstValue = (t.montos || "").split(",")[0].trim();
-        addMontoGroup(t.tag_id, card.querySelector(".tag-card-name").textContent.trim(), firstValue);
-      });
+        if (card) {
+          card.classList.add("selected");
+          const firstValue = (t.montos || "").split(",")[0].trim();
+          addMontoGroup(t.tag_id, card.querySelector(".tag-card-name").textContent.trim(), firstValue);
+        }
+      }
       (existing.trackings || []).forEach((t) => addTrackingRow(t));
     }
     updateTrackingsCount();
@@ -456,22 +453,21 @@ document.addEventListener("DOMContentLoaded", () => {
     modalAddCompra.classList.remove("hidden");
   }
 
-  // La tienda es multi-selección tanto al crear como al editar — una tarjeta
-  // de compra puede agrupar varias tiendas a la vez, cada una con su propio
-  // grupo de cantidades, sin perder lo ya escrito en las demás.
+  // La tienda es selección única — al elegir una se reemplaza la anterior.
+  // Dar clic en la ya elegida la deselecciona.
   compraTagsChecklist.addEventListener("click", (e) => {
     const card = e.target.closest(".tag-card");
     if (!card) return;
     const tagId = card.dataset.tagId;
-    const tagName = card.querySelector(".tag-card-name").textContent.trim();
-
-    const nowSelected = !card.classList.contains("selected");
-    card.classList.toggle("selected", nowSelected);
-    if (nowSelected) {
+    const alreadySelected = card.classList.contains("selected");
+    compraTagsChecklist.querySelectorAll(".tag-card").forEach((c) => c.classList.remove("selected"));
+    compraMontoGroups.innerHTML = "";
+    if (!alreadySelected) {
+      const tagName = card.querySelector(".tag-card-name").textContent.trim();
+      card.classList.add("selected");
       addMontoGroup(tagId, tagName, null);
-    } else {
-      removeMontoGroup(tagId);
     }
+    updateMontoPlaceholder();
   });
 
   if (btnAddCompraTag) {
@@ -500,6 +496,8 @@ document.addEventListener("DOMContentLoaded", () => {
               escapeHtml(data.name) +
               "</span></div>"
           );
+          compraTagsChecklist.querySelectorAll(".tag-card").forEach((c) => c.classList.remove("selected"));
+          compraMontoGroups.innerHTML = "";
           const newCard = compraTagsChecklist.lastElementChild;
           newCard.classList.add("selected");
           addMontoGroup(data.id, data.name, null);
@@ -524,12 +522,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const descripcion = compraDescripcionField.value.trim();
       const groups = Array.from(compraMontoGroups.querySelectorAll(".compra-monto-group"));
       if (!groups.length) {
-        showToast("Elige al menos una tienda.");
+        showToast("Elige la tienda.");
         return;
       }
 
-      // Una sola tarjeta agrupa todas las tiendas elegidas — cada una con su
-      // lista de montos tal cual se escribieron (sin sumar).
+      // Cada tarjeta es de una sola tienda.
       const tiendas = groups.map((group) => ({
         tag_id: group.dataset.tagId,
         montos: collectGroupMontos(group).join(","),

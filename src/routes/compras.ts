@@ -192,7 +192,9 @@ function parseRegistroBody(
     res.status(400).json({ error: "El correo es obligatorio." });
     return null;
   }
-  const rawTiendas = Array.isArray(body.tiendas) ? body.tiendas : [];
+  // Cada tarjeta de compra es de UNA sola tienda — si el cliente manda más
+  // de una (dato viejo/manipulado), solo se usa la primera.
+  const rawTiendas = (Array.isArray(body.tiendas) ? body.tiendas : []).slice(0, 1);
   const tiendas: { tagId: number; montos: string | null }[] = [];
   for (const t of rawTiendas) {
     const tag = t && t.tag_id !== undefined ? getOwnTag(req, String(t.tag_id)) : undefined;
@@ -206,7 +208,7 @@ function parseRegistroBody(
     tiendas.push({ tagId: tag.id, montos: montosRaw.length ? montosRaw.join(",") : null });
   }
   if (!tiendas.length) {
-    res.status(400).json({ error: "Elige al menos una tienda." });
+    res.status(400).json({ error: "Elige la tienda." });
     return null;
   }
   const tarjeta = (body.tarjeta || "").trim() || null;
