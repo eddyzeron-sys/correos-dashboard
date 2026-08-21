@@ -168,6 +168,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const newCompraTarjetaValue = document.getElementById("new-compra-tarjeta-value");
   const btnAddCompraTarjeta = document.getElementById("btn-add-compra-tarjeta");
   const compraDescripcionField = document.getElementById("compra-descripcion-field");
+  const compraImagenPaste = document.getElementById("compra-imagen-paste");
+  const compraImagenPreview = document.getElementById("compra-imagen-preview");
+  const compraImagenPlaceholder = document.getElementById("compra-imagen-placeholder");
+  const btnRemoveImagen = document.getElementById("btn-remove-imagen");
   const compraMontoHint = document.getElementById("compra-monto-hint");
   const compraTiendaSelect = document.getElementById("compra-tienda-select");
   const btnToggleNewTienda = document.getElementById("btn-toggle-new-tienda");
@@ -202,9 +206,85 @@ document.addEventListener("DOMContentLoaded", () => {
   // Tarjetas guardadas del correo seleccionado, para poder elegirlas en el
   // formulario de compra sin tener que pedirlas de nuevo al servidor.
   let currentTarjetas = [];
+  // Foto pegada en el modal de compra actual (data URI ya redimensionada), o
+  // null si no hay ninguna.
+  let compraImagenData = null;
 
   function escapeHtml(text) {
     return String(text).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  }
+
+  // Redimensiona/comprime una imagen del portapapeles antes de guardarla —
+  // así la foto se ve chica en la tarjeta sin engordar la base de datos con
+  // capturas de pantalla a resolución completa.
+  function resizeImageFile(file, maxDim, quality) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          let width = img.width;
+          let height = img.height;
+          if (width > height && width > maxDim) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else if (height > maxDim) {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/jpeg", quality));
+        };
+        img.onerror = reject;
+        img.src = reader.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function showCompraImagenPreview(dataUrl) {
+    if (dataUrl) {
+      compraImagenPreview.src = dataUrl;
+      compraImagenPreview.classList.remove("hidden");
+      compraImagenPlaceholder.classList.add("hidden");
+      btnRemoveImagen.classList.remove("hidden");
+    } else {
+      compraImagenPreview.src = "";
+      compraImagenPreview.classList.add("hidden");
+      compraImagenPlaceholder.classList.remove("hidden");
+      btnRemoveImagen.classList.add("hidden");
+    }
+  }
+
+  if (compraImagenPaste) {
+    compraImagenPaste.addEventListener("paste", (e) => {
+      const items = (e.clipboardData || window.clipboardData).items;
+      for (const item of items) {
+        if (item.type.indexOf("image") !== -1) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          resizeImageFile(file, 320, 0.72)
+            .then((dataUrl) => {
+              compraImagenData = dataUrl;
+              showCompraImagenPreview(dataUrl);
+            })
+            .catch(() => showToast("No se pudo leer la imagen."));
+          break;
+        }
+      }
+    });
+  }
+
+  if (btnRemoveImagen) {
+    btnRemoveImagen.addEventListener("click", (e) => {
+      e.stopPropagation();
+      compraImagenData = null;
+      showCompraImagenPreview(null);
+    });
   }
 
   // Los montos NUNCA se suman — se listan tal cual se ingresaron, separados
@@ -251,13 +331,18 @@ document.addEventListener("DOMContentLoaded", () => {
       r.trackings && r.trackings.length
         ? '<div class="compra-enviado-badge">📦 Enviado</div>'
         : "";
+    // Miniatura chica de la foto del producto, si tiene — no agranda la
+    // tarjeta, solo va pegada al inicio de la primera línea.
+    const thumbHtml = r.imagen ? '<img class="compra-registro-thumb" src="' + r.imagen + '" alt="" />' : "";
     return (
       '<div class="compra-registro-card" data-id="' + r.id + '">' +
       '<button type="button" class="btn-remove-registro" data-id="' + r.id + '" title="Eliminar">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
       '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>' +
       enviadoBadge +
-      '<div class="compra-registro-top"><b>Tarjeta:</b> ' +
+      '<div class="compra-registro-top">' +
+      thumbHtml +
+      '<b>Tarjeta:</b> ' +
       (r.tarjeta ? escapeHtml(r.tarjeta) : "—") +
       ' &nbsp; <b>Correo:</b> ' +
       escapeHtml(r.correo || "—") +
@@ -293,6 +378,41 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function wireRegistroCardClicks() {
     comprasPanel.querySelectorAll(".compra-registro-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        const data = registroDataById.get(Number(card.dataset.id));
+        if (data) openCompraModal(data);
+      });
+    });
+  }
+
+  // ---------- "Productos enviados": galería con foto de las compras que ya
+  // tienen algún tracking cargado ----------
+  function productoEnviadoCardHtml(r) {
+    const imgHtml = r.imagen
+      ? '<img class="producto-enviado-img" src="' + r.imagen + '" alt="" />'
+      : '<div class="producto-enviado-img producto-enviado-img-placeholder">📦</div>';
+    const tiendaText = r.tiendas.length
+      ? r.tiendas.map((t) => (t.tag_name ? escapeHtml(t.tag_name) : "—") + ": " + formatMontos(t.montos)).join(" · ")
+      : "";
+    const trackingsHtml = r.trackings
+      .map((t) => '<div class="producto-enviado-tracking">📦 ' + escapeHtml(t.numero_tracking) + "</div>")
+      .join("");
+    return (
+      '<div class="producto-enviado-card" data-id="' + r.id + '">' +
+      imgHtml +
+      '<div class="producto-enviado-info">' +
+      '<div class="producto-enviado-desc">' +
+      (r.descripcion ? escapeHtml(r.descripcion) : "Sin descripción") +
+      "</div>" +
+      (tiendaText ? '<div class="producto-enviado-tienda">' + tiendaText + "</div>" : "") +
+      trackingsHtml +
+      '<div class="producto-enviado-correo muted">' + escapeHtml(r.correo || "") + "</div>" +
+      "</div></div>"
+    );
+  }
+
+  function wireProductosEnviadosClicks() {
+    comprasPanel.querySelectorAll(".producto-enviado-card").forEach((card) => {
       card.addEventListener("click", () => {
         const data = registroDataById.get(Number(card.dataset.id));
         if (data) openCompraModal(data);
@@ -401,8 +521,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Renderiza el panel del correo seleccionado con dos pestañas: Registro de
-  // compras y Mis tarjetas (ambas propias de ese correo).
+  // Renderiza el panel del correo seleccionado con tres pestañas: Registro
+  // de compras, Mis tarjetas y Productos enviados (todas propias de ese
+  // correo).
   function renderPanel(registros, tarjetas) {
     registroDataById = new Map();
     // El backend ya entrega los registros ordenados por creación más
@@ -413,11 +534,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const tarjetasListHtml = tarjetas.length
       ? '<div class="tarjetas-list">' + tarjetas.map(tarjetaCardHtml).join("") + "</div>"
       : '<div class="tarjetas-list"><div class="list-empty">Todavía no has guardado ninguna tarjeta para este correo.</div></div>';
+    const enviados = registros.filter((r) => r.trackings && r.trackings.length);
+    const enviadosListHtml = enviados.length
+      ? '<div class="productos-enviados-grid">' + enviados.map(productoEnviadoCardHtml).join("") + "</div>"
+      : '<div class="list-empty">Todavía no hay productos enviados para este correo.</div>';
 
     comprasPanel.innerHTML =
       '<div class="compras-panel-tabs">' +
       '<button type="button" class="page-tab-btn active" data-panel-tab="registro">Registro de compras</button>' +
       '<button type="button" class="page-tab-btn" data-panel-tab="tarjetas">Mis tarjetas</button>' +
+      '<button type="button" class="page-tab-btn" data-panel-tab="enviados">Productos enviados</button>' +
       "</div>" +
       '<div class="compras-panel-tab-content active" data-panel-tab-content="registro">' +
       '<div class="compras-panel-header"><h2>Registro de compras</h2>' +
@@ -442,6 +568,10 @@ document.addEventListener("DOMContentLoaded", () => {
       '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>' +
       "</div></div>" +
       tarjetasListHtml +
+      "</div>" +
+      '<div class="compras-panel-tab-content" data-panel-tab-content="enviados">' +
+      '<div class="compras-panel-header"><h2>Productos enviados</h2></div>' +
+      enviadosListHtml +
       "</div>";
 
     wireComprasPanelTabs();
@@ -462,6 +592,7 @@ document.addEventListener("DOMContentLoaded", () => {
     wireRegistroDeleteButtons();
     wireRegistroCardClicks();
     wireTarjetaCardButtons();
+    wireProductosEnviadosClicks();
     applyEnviadosFilter();
     applyTarjetasFilter();
   }
@@ -732,6 +863,8 @@ document.addEventListener("DOMContentLoaded", () => {
     renderCompraTarjetaSelect(existing ? existing.tarjeta || "" : "");
     newCompraTarjetaValue.value = "";
     compraDescripcionField.value = existing ? existing.descripcion || "" : "";
+    compraImagenData = existing ? existing.imagen || null : null;
+    showCompraImagenPreview(compraImagenData);
     newCompraTagName.value = "";
     newCompraTiendaRow.classList.add("hidden");
     compraMontoGroups.innerHTML = "";
@@ -835,7 +968,15 @@ document.addEventListener("DOMContentLoaded", () => {
         montos: collectGroupMontos(group).join(","),
       }));
       const trackings = collectTrackings();
-      const payload = { compra_email_id: selectedEmailId, correo, tarjeta, descripcion, tiendas, trackings };
+      const payload = {
+        compra_email_id: selectedEmailId,
+        correo,
+        tarjeta,
+        descripcion,
+        imagen: compraImagenData,
+        tiendas,
+        trackings,
+      };
       const url = editingRegistroId ? `/compras/registros/${editingRegistroId}` : "/compras/registros";
 
       apiFetch(url, {

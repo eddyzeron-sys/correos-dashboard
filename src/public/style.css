@@ -568,6 +568,90 @@ button.link:hover { background: none; color: var(--accent-dark); }
 }
 .compra-email-card .icon-actions-group { flex-shrink: 0; }
 
+/* ---------- Foto del producto (pegar del portapapeles) ---------- */
+.compra-imagen-paste {
+  margin-top: 6px;
+  min-height: 60px;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: text;
+  padding: 8px 40px;
+  outline: none;
+}
+.compra-imagen-paste:focus { border-color: var(--accent); }
+#compra-imagen-preview {
+  max-height: 60px;
+  max-width: 100%;
+  border-radius: 6px;
+  object-fit: contain;
+}
+#compra-imagen-placeholder { font-size: 0.78rem; text-align: center; }
+#btn-remove-imagen {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+}
+
+/* Miniatura de la foto en la tarjeta de "Registro de compras" — chica a
+   propósito, no debe hacer crecer la tarjeta. */
+.compra-registro-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  object-fit: cover;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+/* ---------- Productos enviados (galería con foto) ---------- */
+.productos-enviados-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  padding-right: 4px;
+  margin-right: -4px;
+  align-content: start;
+}
+.producto-enviado-card {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.producto-enviado-card:hover { border-color: var(--accent); }
+.producto-enviado-img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  background: var(--surface-muted);
+  display: block;
+}
+.producto-enviado-img-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+}
+.producto-enviado-info { padding: 8px 10px; display: flex; flex-direction: column; gap: 3px; }
+.producto-enviado-desc { font-weight: 700; font-size: 0.76rem; }
+.producto-enviado-tienda { font-size: 0.68rem; color: var(--accent-dark); }
+.producto-enviado-tracking { font-size: 0.66rem; color: var(--muted); }
+.producto-enviado-correo { font-size: 0.64rem; overflow-wrap: anywhere; }
+
 /* ---------- Mis tarjetas (dentro del panel del correo seleccionado) ---------- */
 .tarjetas-list { display: flex; flex-direction: column; gap: 8px; }
 .compra-tarjeta-card {

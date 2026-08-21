@@ -119,6 +119,7 @@ db.exec(`
     monto REAL,
     montos TEXT,
     descripcion TEXT,
+    imagen TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -316,6 +317,12 @@ if (tableExists("compra_registros") && !columnExists("compra_registros", "descri
   db.exec("ALTER TABLE compra_registros ADD COLUMN descripcion TEXT;");
 }
 
+// Foto del producto pegada desde el portapapeles (data URI, ya comprimida y
+// redimensionada en el cliente antes de guardarla).
+if (tableExists("compra_registros") && !columnExists("compra_registros", "imagen")) {
+  db.exec("ALTER TABLE compra_registros ADD COLUMN imagen TEXT;");
+}
+
 // "Mis tarjetas" pasó de ser una libreta general del usuario a estar dentro
 // del registro de compras de cada correo — la columna se agrega nullable
 // porque SQLite no permite ADD COLUMN con NOT NULL sin default; las filas
@@ -475,6 +482,7 @@ export interface CompraRegistroRow {
   tag_id: number | null;
   montos: string | null;
   descripcion: string | null;
+  imagen: string | null;
   created_at: string;
 }
 

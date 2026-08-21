@@ -200,6 +200,18 @@
           <label class="mt">Descripción</label>
           <input type="text" id="compra-descripcion-field" placeholder="ej. Amazon Echo" />
 
+          <label class="mt">Foto del producto</label>
+          <div class="compra-imagen-paste" id="compra-imagen-paste" tabindex="0">
+            <img id="compra-imagen-preview" class="hidden" alt="Foto del producto" />
+            <span class="muted" id="compra-imagen-placeholder">Haz clic aquí y pega una imagen (Ctrl+V)</span>
+            <button type="button" class="icon-action danger-hover hidden" id="btn-remove-imagen" title="Quitar imagen">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+
           <div id="compra-monto-groups"></div>
           <p class="muted field-hint" id="compra-monto-hint">Elige la tienda arriba para poder poner el gasto.</p>
         </div>

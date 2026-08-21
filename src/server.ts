@@ -33,7 +33,9 @@ app.set("trust proxy", 1);
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "..", "src", "views"));
 app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+// Límite más alto de lo normal porque las fotos de producto pegadas en
+// Compras van como data URI dentro del JSON (ya comprimidas en el cliente).
+app.use(express.json({ limit: "3mb" }));
 app.use(express.static(path.join(__dirname, "..", "src", "public")));
 
 app.use(
