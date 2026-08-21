@@ -25,17 +25,14 @@
           <p class="error"><%= error %></p>
         <% } %>
 
-        <div class="list" id="compras-emails-list">
-          <% if (!emails.length) { %>
-            <div class="list-empty">Todavía no hay correos registrados.</div>
-          <% } %>
-          <% emails.forEach(function(e) { %>
-            <div class="email-row" data-id="<%= e.id %>">
-              <div class="email-top-row">
-                <span class="email-address compra-email-text"><%= e.email %></span>
-              </div>
-              <div class="email-bottom-row">
-                <div class="email-tags"></div>
+        <div class="compras-layout">
+          <aside class="compras-sidebar" id="compras-emails-list">
+            <% if (!emails.length) { %>
+              <div class="list-empty">Todavía no hay correos registrados.</div>
+            <% } %>
+            <% emails.forEach(function(e) { %>
+              <div class="compra-email-card" data-id="<%= e.id %>" data-email="<%= e.email %>">
+                <span class="compra-email-text"><%= e.email %></span>
                 <div class="icon-actions-group">
                   <button type="button" class="icon-action btn-edit-email" title="Editar" data-id="<%= e.id %>" data-email="<%= e.email %>">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -52,8 +49,12 @@
                   </button>
                 </div>
               </div>
-            </div>
-          <% }) %>
+            <% }) %>
+          </aside>
+
+          <section class="compras-panel" id="compras-panel">
+            <div class="list-empty">Selecciona un correo a la izquierda para ver su registro de compras.</div>
+          </section>
         </div>
       </main>
     </div>

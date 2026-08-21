@@ -94,7 +94,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   document.querySelectorAll(".btn-edit-email").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
       formEditEmail.dataset.id = btn.dataset.id;
       editEmailField.value = btn.dataset.email;
       modalEdit.classList.remove("hidden");
@@ -128,19 +129,43 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   document.querySelectorAll(".btn-delete-email").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
       showConfirm(`¿Eliminar ${btn.dataset.email}?`, () => {
         apiFetch(`/compras/emails/${btn.dataset.id}/delete`, { method: "POST" })
           .then((r) => r.json())
           .then(() => {
-            const row = btn.closest(".email-row");
-            if (row) row.remove();
+            const card = btn.closest(".compra-email-card");
+            if (card) {
+              if (card.classList.contains("active")) showComprasPanelEmpty();
+              card.remove();
+            }
             showToast("Correo eliminado");
           })
           .catch((err) => {
             if (err.message !== "unauthenticated") showToast("No se pudo eliminar el correo.");
           });
       });
+    });
+  });
+
+  // Selección de correo: clic en la tarjeta muestra su registro de compras a
+  // la derecha (todavía sin datos — se arma cuando se definan los campos).
+  const comprasPanel = document.getElementById("compras-panel");
+  function showComprasPanelEmpty() {
+    comprasPanel.innerHTML = '<div class="list-empty">Selecciona un correo a la izquierda para ver su registro de compras.</div>';
+  }
+  function showComprasPanelFor(email) {
+    comprasPanel.innerHTML =
+      '<div class="compras-panel-header"><h2>' +
+      email.replace(/</g, "&lt;") +
+      '</h2></div><div class="list-empty">Todavía no hay compras registradas para este correo.</div>';
+  }
+  document.querySelectorAll(".compra-email-card").forEach((card) => {
+    card.addEventListener("click", () => {
+      document.querySelectorAll(".compra-email-card").forEach((c) => c.classList.remove("active"));
+      card.classList.add("active");
+      showComprasPanelFor(card.dataset.email);
     });
   });
 });
