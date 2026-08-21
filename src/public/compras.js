@@ -289,22 +289,45 @@ document.addEventListener("DOMContentLoaded", () => {
     comprasPanel.innerHTML = '<div class="list-empty">Selecciona un correo a la izquierda para ver su registro de compras.</div>';
   }
 
+  // Filtro "Solo enviados" — se mantiene marcado al cambiar de correo.
+  let onlyEnviados = false;
+
+  function applyEnviadosFilter() {
+    comprasPanel.querySelectorAll(".compra-registro-card").forEach((card) => {
+      const data = registroDataById.get(Number(card.dataset.id));
+      const isEnviado = !!(data && data.trackings && data.trackings.length);
+      card.style.display = onlyEnviados && !isEnviado ? "none" : "";
+    });
+  }
+
   function renderRegistros(registros) {
     registroDataById = new Map();
+    // El backend ya entrega los registros ordenados por creación más
+    // reciente primero.
     const listHtml = registros.length
       ? '<div class="compra-registros-list">' + registros.map(registroCardHtml).join("") + "</div>"
       : '<div class="list-empty">Todavía no hay compras registradas para este correo.</div>';
 
     comprasPanel.innerHTML =
       '<div class="compras-panel-header"><h2>Registro de compras</h2>' +
+      '<div class="compras-panel-header-actions">' +
+      '<label class="compras-filter-enviados"><input type="checkbox" id="filter-enviados"' +
+      (onlyEnviados ? " checked" : "") +
+      ' /> Solo enviados</label>' +
       '<button type="button" id="btn-add-compra" class="btn-cta btn-icon-only" title="Agregar compra">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
-      '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button></div>' +
+      '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>' +
+      "</div></div>" +
       listHtml;
 
     document.getElementById("btn-add-compra").addEventListener("click", () => openCompraModal(null));
+    document.getElementById("filter-enviados").addEventListener("change", (e) => {
+      onlyEnviados = e.target.checked;
+      applyEnviadosFilter();
+    });
     wireRegistroDeleteButtons();
     wireRegistroCardClicks();
+    applyEnviadosFilter();
   }
 
   function loadRegistrosFor(id) {
@@ -374,8 +397,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return (
       '<div class="row compra-tracking-row">' +
       '<input type="text" class="compra-tracking-numero" placeholder="Número de tracking" />' +
-      '<span class="muted" style="font-weight:700;">$</span>' +
-      '<input type="number" class="compra-tracking-precio" step="0.01" min="0" placeholder="Precio" />' +
       '<button type="button" class="icon-action danger-hover btn-remove-tracking" title="Quitar tracking">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
       '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>' +
@@ -388,9 +409,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const row = compraTrackingsList.lastElementChild;
     if (existing) {
       row.querySelector(".compra-tracking-numero").value = existing.numero_tracking || "";
-      if (existing.precio !== null && existing.precio !== undefined) {
-        row.querySelector(".compra-tracking-precio").value = existing.precio;
-      }
     }
     updateTrackingsCount();
     return row;
@@ -412,7 +430,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return Array.from(compraTrackingsList.querySelectorAll(".compra-tracking-row"))
       .map((row) => ({
         numero_tracking: row.querySelector(".compra-tracking-numero").value.trim(),
-        precio: row.querySelector(".compra-tracking-precio").value.trim(),
       }))
       .filter((t) => t.numero_tracking !== "");
   }
@@ -566,6 +583,7 @@ document.addEventListener("DOMContentLoaded", () => {
           }
           wireRegistroDeleteButtons();
           wireRegistroCardClicks();
+          applyEnviadosFilter();
           showToast(editingRegistroId ? "Compra actualizada" : "Compra agregada");
         })
         .catch((err) => {
