@@ -615,14 +615,14 @@ button.link:hover { background: none; color: var(--accent-dark); }
 }
 
 /* Miniatura de la foto en la tarjeta de "Registro de compras" — chica a
-   propósito, no debe hacer crecer la tarjeta. */
+   propósito, no debe hacer crecer la tarjeta. Va a la derecha de la línea. */
 .compra-registro-thumb {
   width: 24px;
   height: 24px;
   border-radius: 6px;
   object-fit: cover;
-  vertical-align: middle;
-  margin-right: 6px;
+  flex-shrink: 0;
+  margin-left: 8px;
 }
 
 /* ---------- Productos enviados (galería con foto) ---------- */
@@ -828,7 +828,8 @@ button.link:hover { background: none; color: var(--accent-dark); }
   border-radius: 999px;
   margin-bottom: 6px;
 }
-.compra-registro-top { margin-bottom: 5px; font-size: 0.72rem; }
+.compra-registro-top { display: flex; align-items: center; margin-bottom: 5px; font-size: 0.72rem; }
+.compra-registro-top-text { flex: 1; min-width: 0; }
 .compra-registro-descripcion { font-weight: 700; font-size: 0.78rem; margin-bottom: 5px; }
 .compra-tiendas-lines { display: flex; flex-direction: column; gap: 2px; margin-bottom: 5px; }
 .compra-tienda-line { font-size: 0.72rem; }

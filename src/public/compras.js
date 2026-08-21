@@ -332,7 +332,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ? '<div class="compra-enviado-badge">📦 Enviado</div>'
         : "";
     // Miniatura chica de la foto del producto, si tiene — no agranda la
-    // tarjeta, solo va pegada al inicio de la primera línea.
+    // tarjeta, va a la derecha de la primera línea.
     const thumbHtml = r.imagen ? '<img class="compra-registro-thumb" src="' + r.imagen + '" alt="" />' : "";
     return (
       '<div class="compra-registro-card" data-id="' + r.id + '">' +
@@ -341,11 +341,12 @@ document.addEventListener("DOMContentLoaded", () => {
       '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>' +
       enviadoBadge +
       '<div class="compra-registro-top">' +
-      thumbHtml +
-      '<b>Tarjeta:</b> ' +
+      '<span class="compra-registro-top-text"><b>Tarjeta:</b> ' +
       (r.tarjeta ? escapeHtml(r.tarjeta) : "—") +
       ' &nbsp; <b>Correo:</b> ' +
       escapeHtml(r.correo || "—") +
+      "</span>" +
+      thumbHtml +
       "</div>" +
       (r.descripcion ? '<div class="compra-registro-descripcion">' + escapeHtml(r.descripcion) + "</div>" : "") +
       '<div class="compra-tiendas-lines">' +
