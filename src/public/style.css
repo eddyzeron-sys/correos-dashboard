@@ -569,6 +569,31 @@ button.link:hover { background: none; color: var(--accent-dark); }
 }
 .compra-email-card .icon-actions-group { flex-shrink: 0; }
 
+/* ---------- Menú "Emails" (correos secundarios, página completa) ---------- */
+.secondary-emails-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+.secondary-email-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  border: 1.5px solid transparent;
+}
+.secondary-email-card .secondary-email-text {
+  font-weight: 700;
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+  line-height: 1.3;
+}
+.secondary-email-card .icon-actions-group { flex-shrink: 0; }
+
 /* ---------- Foto del producto: columna aparte a la derecha del modal ---------- */
 .compra-detalles-grid {
   display: grid;

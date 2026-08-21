@@ -16,12 +16,10 @@ router.post("/configuracion", (req, res) => {
   const hideCorreos = body.show_correos ? 0 : 1;
   const hideTrackings = body.show_trackings ? 0 : 1;
   const hideCompras = body.show_compras ? 0 : 1;
-  db.prepare("UPDATE users SET hide_correos = ?, hide_trackings = ?, hide_compras = ? WHERE id = ?").run(
-    hideCorreos,
-    hideTrackings,
-    hideCompras,
-    req.user!.id
-  );
+  const hideEmails = body.show_emails ? 0 : 1;
+  db.prepare(
+    "UPDATE users SET hide_correos = ?, hide_trackings = ?, hide_compras = ?, hide_emails = ? WHERE id = ?"
+  ).run(hideCorreos, hideTrackings, hideCompras, hideEmails, req.user!.id);
   res.redirect("/configuracion?saved=1");
 });
 

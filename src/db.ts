@@ -27,6 +27,7 @@ db.exec(`
     hide_correos INTEGER NOT NULL DEFAULT 0,
     hide_trackings INTEGER NOT NULL DEFAULT 0,
     hide_compras INTEGER NOT NULL DEFAULT 0,
+    hide_emails INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -145,6 +146,17 @@ db.exec(`
     articulo TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
+
+  -- Menú "Emails": libreta de correos secundarios (no son buzones Mailcow
+  -- reales ni la libreta de compra_emails) — global por usuario, se usan
+  -- como opciones del campo "Correo" al agregar/editar una compra.
+  CREATE TABLE IF NOT EXISTS secondary_emails (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    email TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (user_id, email)
+  );
 `);
 
 function tableExists(name: string): boolean {
@@ -168,6 +180,9 @@ if (!columnExists("users", "hide_trackings")) {
 }
 if (!columnExists("users", "hide_compras")) {
   db.exec("ALTER TABLE users ADD COLUMN hide_compras INTEGER NOT NULL DEFAULT 0;");
+}
+if (!columnExists("users", "hide_emails")) {
+  db.exec("ALTER TABLE users ADD COLUMN hide_emails INTEGER NOT NULL DEFAULT 0;");
 }
 
 // email_accounts pudo haberse creado con un esquema anterior (sin user_id o
@@ -412,6 +427,7 @@ export interface UserRow {
   hide_correos: number;
   hide_trackings: number;
   hide_compras: number;
+  hide_emails: number;
   created_at: string;
 }
 
@@ -452,6 +468,13 @@ export interface TrackingRow {
 }
 
 export interface CompraEmailRow {
+  id: number;
+  user_id: number;
+  email: string;
+  created_at: string;
+}
+
+export interface SecondaryEmailRow {
   id: number;
   user_id: number;
   email: string;

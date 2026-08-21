@@ -50,6 +50,16 @@
                 <span class="switch-slider"></span>
               </label>
             </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-row-title">Emails</div>
+                <div class="muted settings-row-desc">Libreta de correos secundarios</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" name="show_emails" <%= !user.hide_emails ? 'checked' : '' %> />
+                <span class="switch-slider"></span>
+              </label>
+            </div>
             <button type="submit" class="primary mt">Guardar</button>
           </form>
         </div>

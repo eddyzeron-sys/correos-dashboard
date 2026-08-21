@@ -1,6 +1,7 @@
 import { Router, Request } from "express";
 import { db, CompraEmailRow, CompraTagRow, CompraTarjetaRow } from "../db";
 import { requireAuth } from "../middleware/require-auth";
+import { listOwnSecondaryEmails } from "./secondary-emails";
 
 const router = Router();
 router.use(requireAuth);
@@ -103,6 +104,7 @@ router.get("/compras", (req, res) => {
   res.render("compras", {
     emails: listOwnEmails(req),
     tags: listOwnTags(req),
+    secondaryEmails: listOwnSecondaryEmails(req),
     activeNav: "compras",
     error: null,
   });

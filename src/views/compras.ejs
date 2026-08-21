@@ -180,7 +180,24 @@
               </div>
 
               <label class="mt">Correo</label>
-              <input type="email" id="compra-correo-field" required placeholder="ej. tucorreo@gmail.com" />
+              <div class="row">
+                <select id="compra-correo-select" required>
+                  <option value="">— Elegir correo —</option>
+                  <% secondaryEmails.forEach(function(e) { %>
+                    <option value="<%= e.email %>"><%= e.email %></option>
+                  <% }) %>
+                </select>
+                <button type="button" class="icon-action" id="btn-toggle-new-compra-correo" title="Agregar correo nuevo">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                </button>
+              </div>
+              <div class="row mt hidden" id="new-compra-correo-row">
+                <input type="email" id="new-compra-correo-value" placeholder="Nuevo correo, ej. tucorreo@gmail.com" />
+                <button type="button" id="btn-add-compra-correo">Agregar</button>
+              </div>
 
               <label class="mt">Tarjeta usada</label>
               <div class="row">

@@ -161,7 +161,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const formEditTarjeta = document.getElementById("form-edit-tarjeta");
   const modalAddCompra = document.getElementById("modal-add-compra");
   const formAddCompra = document.getElementById("form-add-compra");
-  const compraCorreoField = document.getElementById("compra-correo-field");
+  const compraCorreoSelect = document.getElementById("compra-correo-select");
+  const btnToggleNewCompraCorreo = document.getElementById("btn-toggle-new-compra-correo");
+  const newCompraCorreoRow = document.getElementById("new-compra-correo-row");
+  const newCompraCorreoValue = document.getElementById("new-compra-correo-value");
+  const btnAddCompraCorreo = document.getElementById("btn-add-compra-correo");
   const compraTarjetaSelect = document.getElementById("compra-tarjeta-select");
   const btnToggleNewTarjeta = document.getElementById("btn-toggle-new-tarjeta");
   const newCompraTarjetaRow = document.getElementById("new-compra-tarjeta-row");
@@ -853,6 +857,63 @@ document.addEventListener("DOMContentLoaded", () => {
     return compraTarjetaSelect.value;
   }
 
+  // ---------- Selector de "Emails" (libreta global de correos secundarios)
+  // dentro del modal de compra. Igual patrón que Tienda/Tarjeta: si el
+  // correo guardado en una compra vieja no está en la libreta, se agrega
+  // como opción aparte para no perder el dato al editar.
+  function setCompraCorreoSelectValue(email) {
+    if (email && !Array.from(compraCorreoSelect.options).some((o) => o.value === email)) {
+      const option = document.createElement("option");
+      option.value = email;
+      option.textContent = email;
+      compraCorreoSelect.appendChild(option);
+    }
+    compraCorreoSelect.value = email || "";
+    newCompraCorreoRow.classList.add("hidden");
+  }
+
+  if (btnToggleNewCompraCorreo) {
+    btnToggleNewCompraCorreo.addEventListener("click", () => {
+      const nowHidden = newCompraCorreoRow.classList.toggle("hidden");
+      if (!nowHidden) {
+        newCompraCorreoValue.value = "";
+        newCompraCorreoValue.focus();
+      }
+    });
+  }
+
+  if (btnAddCompraCorreo) {
+    btnAddCompraCorreo.addEventListener("click", () => {
+      const email = newCompraCorreoValue.value.trim();
+      if (!email) {
+        newCompraCorreoValue.focus();
+        return;
+      }
+      apiFetch("/emails", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `email=${encodeURIComponent(email)}`,
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.error) {
+            showToast(data.error);
+            return;
+          }
+          const option = document.createElement("option");
+          option.value = data.email;
+          option.textContent = data.email;
+          compraCorreoSelect.insertBefore(option, compraCorreoSelect.options[1] || null);
+          compraCorreoSelect.value = data.email;
+          newCompraCorreoValue.value = "";
+          newCompraCorreoRow.classList.add("hidden");
+        })
+        .catch((err) => {
+          if (err.message !== "unauthenticated") showToast("No se pudo agregar el correo.");
+        });
+    });
+  }
+
   if (btnToggleNewTarjeta) {
     btnToggleNewTarjeta.addEventListener("click", () => {
       const nowHidden = newCompraTarjetaRow.classList.toggle("hidden");
@@ -921,7 +982,7 @@ document.addEventListener("DOMContentLoaded", () => {
     editingRegistroId = existing ? existing.id : null;
     modalTitle.textContent = existing ? "Editar compra" : "Agregar compra";
     btnSubmitCompra.textContent = existing ? "Guardar cambios" : "Guardar compra";
-    compraCorreoField.value = existing ? existing.correo : "";
+    setCompraCorreoSelectValue(existing ? existing.correo : "");
     renderCompraTarjetaSelect(existing ? existing.tarjeta || "" : "");
     newCompraTarjetaValue.value = "";
     compraDescripcionField.value = existing ? existing.descripcion || "" : "";
@@ -1011,9 +1072,9 @@ document.addEventListener("DOMContentLoaded", () => {
     formAddCompra.addEventListener("submit", (e) => {
       e.preventDefault();
       if (!selectedEmailId) return;
-      const correo = compraCorreoField.value.trim();
+      const correo = compraCorreoSelect.value.trim();
       if (!correo) {
-        compraCorreoField.focus();
+        compraCorreoSelect.focus();
         return;
       }
       const tarjeta = getSelectedTarjetaText();
