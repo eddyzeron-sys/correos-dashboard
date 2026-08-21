@@ -58,6 +58,7 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.addEventListener("click", () => {
       modalAdd.classList.add("hidden");
       modalEdit.classList.add("hidden");
+      document.getElementById("modal-add-compra").classList.add("hidden");
     });
   });
 
