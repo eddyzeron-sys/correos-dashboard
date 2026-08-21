@@ -17,10 +17,10 @@ function getOwnEmail(req: Request, id: string): CompraEmailRow | undefined {
     .get(id, req.user!.id) as CompraEmailRow | undefined;
 }
 
-function listOwnTarjetas(req: Request): CompraTarjetaRow[] {
+function listTarjetasForEmail(emailId: number): CompraTarjetaRow[] {
   return db
-    .prepare("SELECT * FROM compra_tarjetas WHERE user_id = ? ORDER BY created_at DESC")
-    .all(req.user!.id) as unknown as CompraTarjetaRow[];
+    .prepare("SELECT * FROM compra_tarjetas WHERE compra_email_id = ? ORDER BY created_at DESC")
+    .all(emailId) as unknown as CompraTarjetaRow[];
 }
 
 function getOwnTarjeta(req: Request, id: string): CompraTarjetaRow | undefined {
@@ -69,7 +69,6 @@ router.get("/compras", (req, res) => {
   res.render("compras", {
     emails: listOwnEmails(req),
     tags: listOwnTags(req),
-    tarjetas: listOwnTarjetas(req),
     activeNav: "compras",
     error: null,
   });
@@ -112,17 +111,33 @@ router.post("/compras/emails/:id/delete", (req, res) => {
   res.json({ ok: true });
 });
 
-// "Mis tarjetas" — libreta de tarjetas guardadas del usuario. Por ahora solo
-// se guardan aquí (CRUD), sin conectarlas todavía al formulario de compra.
+// "Mis tarjetas" — libreta de tarjetas guardadas dentro del registro de
+// compras de cada correo. Por ahora solo se guardan aquí (CRUD), sin
+// conectarlas todavía al formulario de compra.
+router.get("/compras/emails/:id/tarjetas", (req, res) => {
+  const email = getOwnEmail(req, req.params.id);
+  if (!email) {
+    res.status(404).json({ error: "No encontrado" });
+    return;
+  }
+  res.json({ tarjetas: listTarjetasForEmail(email.id) });
+});
+
 router.post("/compras/tarjetas", (req, res) => {
-  const tarjeta = ((req.body as Record<string, string>).tarjeta || "").trim();
+  const body = req.body as Record<string, string>;
+  const email = getOwnEmail(req, body.compra_email_id || "");
+  if (!email) {
+    res.status(400).json({ error: "Correo inválido." });
+    return;
+  }
+  const tarjeta = (body.tarjeta || "").trim();
   if (!tarjeta) {
     res.status(400).json({ error: "La tarjeta es obligatoria." });
     return;
   }
   const info = db
-    .prepare("INSERT INTO compra_tarjetas (user_id, tarjeta) VALUES (?, ?)")
-    .run(req.user!.id, tarjeta);
+    .prepare("INSERT INTO compra_tarjetas (user_id, compra_email_id, tarjeta) VALUES (?, ?, ?)")
+    .run(req.user!.id, email.id, tarjeta);
   res.json({ id: Number(info.lastInsertRowid), tarjeta });
 });
 

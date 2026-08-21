@@ -508,8 +508,8 @@ button.link:hover { background: none; color: var(--accent-dark); }
 .modal-tab-count { color: inherit; }
 .modal-tab-panel.hidden { display: none; }
 
-/* ---------- Pestañas de página (ej. Compras: Registro / Mis tarjetas) ---------- */
-.page-tabs { display: flex; gap: 4px; border-bottom: 1.5px solid var(--border); margin-bottom: 18px; }
+/* ---------- Pestañas reutilizables tipo página (ej. dentro del panel de
+   Compras: Registro de compras / Mis tarjetas) ---------- */
 .page-tab-btn {
   background: none;
   border: none;
@@ -525,7 +525,6 @@ button.link:hover { background: none; color: var(--accent-dark); }
 }
 .page-tab-btn.active { color: var(--accent-dark); border-bottom-color: var(--accent); }
 .page-tab-btn:hover { background: none; }
-.page-tab-panel.hidden { display: none; }
 
 /* ---------- Compras: correos (izquierda) + registro (derecha) ---------- */
 .compras-layout { display: flex; gap: 18px; align-items: flex-start; }
@@ -568,13 +567,7 @@ button.link:hover { background: none; color: var(--accent-dark); }
 }
 .compra-email-card .icon-actions-group { flex-shrink: 0; }
 
-/* ---------- Mis tarjetas ---------- */
-.tarjetas-panel {
-  background: var(--surface-muted);
-  border-radius: var(--radius-sm);
-  padding: 20px;
-  max-width: 700px;
-}
+/* ---------- Mis tarjetas (dentro del panel del correo seleccionado) ---------- */
 .tarjetas-list { display: flex; flex-direction: column; gap: 8px; }
 .compra-tarjeta-card {
   display: flex;
@@ -604,6 +597,25 @@ button.link:hover { background: none; color: var(--accent-dark); }
   display: flex;
   flex-direction: column;
 }
+/* Pestañas del panel del correo seleccionado: Registro de compras / Mis
+   tarjetas. Cada pestaña es su propia columna flex con encabezado fijo
+   (título, filtro, botón +) y solo la lista de abajo hace scroll — nunca
+   toda la página. */
+.compras-panel-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1.5px solid var(--border);
+  margin-bottom: 14px;
+  flex-shrink: 0;
+}
+.compras-panel-tab-content {
+  display: none;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.compras-panel-tab-content.active { display: flex; }
+
 .compras-panel-header {
   display: flex;
   align-items: center;
@@ -627,9 +639,10 @@ button.link:hover { background: none; color: var(--accent-dark); }
 }
 .compras-filter-enviados input { width: auto; margin: 0; }
 
-/* Solo la lista de tarjetas hace scroll — el encabezado (título, filtro,
-   botón +) se queda fijo arriba, sin que se mueva toda la página. */
-.compra-registros-list {
+/* Solo la lista hace scroll — el encabezado (título, filtro, botón +) se
+   queda fijo arriba, sin que se mueva toda la página. */
+.compra-registros-list,
+.compras-panel-tab-content .tarjetas-list {
   display: flex;
   flex-direction: column;
   gap: 10px;

@@ -90,12 +90,13 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
-  -- Libreta de tarjetas guardadas del usuario ("Mis tarjetas"), independiente
-  -- de cualquier compra — por ahora solo se guardan aquí, sin conectarlas
-  -- todavía al formulario de compra.
+  -- Libreta de tarjetas guardadas ("Mis tarjetas"), dentro del registro de
+  -- compras de cada correo de la libreta — por ahora solo se guardan aquí,
+  -- sin conectarlas todavía al formulario de compra.
   CREATE TABLE IF NOT EXISTS compra_tarjetas (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    compra_email_id INTEGER NOT NULL REFERENCES compra_emails(id) ON DELETE CASCADE,
     tarjeta TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
@@ -315,6 +316,17 @@ if (tableExists("compra_registros") && !columnExists("compra_registros", "descri
   db.exec("ALTER TABLE compra_registros ADD COLUMN descripcion TEXT;");
 }
 
+// "Mis tarjetas" pasó de ser una libreta general del usuario a estar dentro
+// del registro de compras de cada correo — la columna se agrega nullable
+// porque SQLite no permite ADD COLUMN con NOT NULL sin default; las filas
+// viejas (de cuando era general, sin correo) quedan huérfanas pero no se
+// borran.
+if (tableExists("compra_tarjetas") && !columnExists("compra_tarjetas", "compra_email_id")) {
+  db.exec(
+    "ALTER TABLE compra_tarjetas ADD COLUMN compra_email_id INTEGER REFERENCES compra_emails(id) ON DELETE CASCADE;"
+  );
+}
+
 // Una compra ahora puede tener varias tiendas dentro de una sola tarjeta
 // (compra_registro_tiendas). Las filas viejas de compra_registros (una por
 // tienda) se migran una sola vez a esa tabla hija, conservando cada tienda
@@ -427,6 +439,7 @@ export interface CompraEmailRow {
 export interface CompraTarjetaRow {
   id: number;
   user_id: number;
+  compra_email_id: number;
   tarjeta: string;
   created_at: string;
 }
