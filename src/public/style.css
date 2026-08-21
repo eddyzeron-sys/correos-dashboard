@@ -849,6 +849,7 @@ button.link:hover { background: none; color: var(--accent-dark); }
 .compra-tienda-line { font-size: 0.72rem; }
 .compra-tienda-line b { color: var(--accent-dark); }
 .compra-tienda-line.muted { color: var(--muted); }
+.compra-registro-fecha { font-size: 0.68rem; color: var(--muted); margin-bottom: 5px; }
 .compra-trackings-lines { display: flex; flex-direction: column; gap: 2px; }
 .compra-tracking-chip { font-size: 0.7rem; color: var(--muted); }
 

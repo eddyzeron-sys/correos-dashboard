@@ -302,6 +302,18 @@ document.addEventListener("DOMContentLoaded", () => {
   // listas anidadas en atributos data-*.
   let registroDataById = new Map();
 
+  // created_at viene como "YYYY-MM-DD HH:MM:SS" en UTC (datetime('now') de
+  // SQLite) — se le agrega la Z para que el navegador lo interprete como UTC
+  // y lo convierta a la fecha local del que mira la pantalla.
+  function formatFechaCompra(createdAt) {
+    if (!createdAt) return "";
+    const d = new Date(createdAt.replace(" ", "T") + "Z");
+    if (Number.isNaN(d.getTime())) return "";
+    const weekday = d.toLocaleDateString("es-ES", { weekday: "long" });
+    const month = d.toLocaleDateString("es-ES", { month: "long" });
+    return "Comprado: " + weekday + " " + d.getDate() + " de " + month + " del " + d.getFullYear();
+  }
+
   function trackingChipHtml(t) {
     let text = escapeHtml(t.numero_tracking);
     if (t.articulo) text += " — " + escapeHtml(t.articulo);
@@ -350,6 +362,7 @@ document.addEventListener("DOMContentLoaded", () => {
       '<div class="compra-tiendas-lines">' +
       tiendaLines +
       "</div>" +
+      '<div class="compra-registro-fecha">' + formatFechaCompra(r.created_at) + "</div>" +
       trackingLines +
       "</div>" +
       thumbHtml +
