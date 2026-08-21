@@ -822,6 +822,12 @@ button.link:hover { background: none; color: var(--accent-dark); }
   display: flex;
   align-items: stretch;
   overflow: hidden;
+  /* Sin esto, cuando .compra-registros-list (flex-column con scroll) no
+     tiene suficiente alto, el navegador ENCOGE cada tarjeta en vez de
+     dejarla scrollear — y como la tarjeta tiene overflow:hidden (para
+     recortar la foto a las esquinas), ese encogimiento recorta texto de
+     verdad en vez de solo verse apretado. */
+  flex-shrink: 0;
 }
 .compra-registro-card:hover { border-color: var(--accent); }
 .compra-registro-main { flex: 1; min-width: 0; padding: 10px 34px 10px 14px; }
