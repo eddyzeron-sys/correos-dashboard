@@ -25,7 +25,7 @@
 }
 
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; font-size: 14px; }
 
 body {
   font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -149,11 +149,11 @@ label {
 
 input, select {
   width: 100%;
-  padding: 11px 14px;
+  padding: 9px 12px;
   margin-top: 6px;
   border: 1.5px solid var(--border);
   border-radius: var(--radius-sm);
-  font-size: 16px;
+  font-size: 0.9rem;
   background: var(--surface-muted);
   color: var(--text);
 }
@@ -574,16 +574,13 @@ button.link:hover { background: none; color: var(--accent-dark); }
   transition: border-color 0.15s ease;
 }
 .compra-registro-card:hover { border-color: var(--accent); }
-.compra-registro-card .field-label { font-size: 0.62rem; color: var(--muted); display: block; }
-.compra-registro-card .field-value { font-weight: 700; font-size: 0.76rem; }
-.compra-registro-top { margin-bottom: 6px; }
-.compra-tiendas-lines { display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px; }
-.compra-tienda-line { font-size: 0.76rem; }
+.compra-registro-top { margin-bottom: 5px; font-size: 0.72rem; }
+.compra-tiendas-lines { display: flex; flex-direction: column; gap: 2px; margin-bottom: 5px; }
+.compra-tienda-line { font-size: 0.72rem; }
 .compra-tienda-line b { color: var(--accent-dark); }
 .compra-tienda-line.muted { color: var(--muted); }
-.compra-trackings-lines { display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px; }
-.compra-tracking-chip { font-size: 0.74rem; color: var(--muted); }
-.compra-registro-correo { margin-top: 2px; }
+.compra-trackings-lines { display: flex; flex-direction: column; gap: 2px; }
+.compra-tracking-chip { font-size: 0.7rem; color: var(--muted); }
 
 .compra-tracking-row { margin-top: 8px; }
 .compra-tracking-row:first-child { margin-top: 0; }
@@ -602,11 +599,6 @@ button.link:hover { background: none; color: var(--accent-dark); }
   color: var(--muted);
 }
 .btn-remove-registro:hover { background: var(--danger-bg); color: var(--danger-text); }
-
-@media (max-width: 640px) {
-  .compras-layout { flex-direction: column; }
-  .compras-sidebar { width: 100%; }
-}
 
 .new-mail-badge {
   display: inline-flex;
@@ -803,45 +795,4 @@ tr:hover td { background: var(--surface-muted); }
 .attachments a { color: var(--accent); text-decoration: none; font-weight: 600; }
 .attachments a:hover { text-decoration: underline; }
 
-/* ---------- Móvil ---------- */
-@media (max-width: 640px) {
-  .shell-wrap { padding: 0; }
-  .app-shell { border-radius: 0; flex-direction: column; min-height: 100vh; box-shadow: none; }
-  .app-sidebar {
-    width: 100%;
-    flex-direction: row;
-    padding: 12px 14px;
-    gap: 6px;
-    overflow-x: auto;
-  }
-  .app-sidebar .logo-dot { margin-bottom: 0; margin-right: 8px; }
-  .app-sidebar .spacer { display: none; }
-  .app-main { padding: 18px 14px 32px; }
-
-  .container { padding: 16px 12px 40px; }
-  h1 { font-size: 1.15rem; }
-  .card { padding: 18px; }
-  .topbar { flex-direction: column; align-items: stretch; }
-  .topbar > div { justify-content: flex-start; }
-  .list-toolbar { flex-direction: column; }
-  .toolbar-search { max-width: none; }
-  button:not(.link):not(.icon-action):not(.btn-icon-only) { width: 100%; }
-  .row button { width: auto; }
-  th, td { padding: 10px 12px; font-size: 0.85rem; }
-  .header-actions { width: auto; align-self: flex-end; }
-  .topbar > div:empty + .header-actions { margin-top: -8px; }
-
-  .list-row { flex-wrap: wrap; }
-  .list-meta { flex-direction: row; align-items: center; width: 100%; justify-content: space-between; margin-top: 6px; }
-
-  /* Tarjeta de correo: en móvil se parte en 2 filas (correo+copiar / etiquetas+acciones) */
-  .email-row { flex-direction: column; align-items: stretch; gap: 8px; }
-  .email-top-row { width: 100%; justify-content: space-between; flex-wrap: wrap; row-gap: 6px; }
-  .email-address { max-width: none; flex: 1; }
-  .email-bottom-row { width: 100%; }
-}
-
-@media (max-width: 400px) {
-  .modal { padding: 8px; }
-  .card { padding: 16px; }
-}
+/* Diseño pensado solo para escritorio — sin soporte específico para móvil. */

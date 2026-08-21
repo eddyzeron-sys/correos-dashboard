@@ -214,16 +214,15 @@ document.addEventListener("DOMContentLoaded", () => {
       '<button type="button" class="btn-remove-registro" data-id="' + r.id + '" title="Eliminar">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
       '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>' +
-      '<div class="compra-registro-top"><span class="field-label">Tarjeta</span><span class="field-value">' +
+      '<div class="compra-registro-top"><b>Tarjeta:</b> ' +
       (r.tarjeta ? escapeHtml(r.tarjeta) : "—") +
-      "</span></div>" +
+      ' &nbsp; <b>Correo:</b> ' +
+      escapeHtml(r.correo || "—") +
+      "</div>" +
       '<div class="compra-tiendas-lines">' +
       tiendaLines +
       "</div>" +
       trackingLines +
-      '<div class="compra-registro-correo"><span class="field-label">Correo</span><span class="field-value">' +
-      escapeHtml(r.correo || "") +
-      "</span></div>" +
       "</div>"
     );
   }
