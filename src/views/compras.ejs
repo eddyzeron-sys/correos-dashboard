@@ -138,7 +138,7 @@
 
   <!-- Modal agregar compra -->
   <div id="modal-add-compra" class="modal hidden">
-    <form class="card card-wide modal-card modal-card-flex" id="form-add-compra">
+    <form class="card card-xwide modal-card modal-card-flex" id="form-add-compra">
       <div class="modal-card-header">
         <div class="modal-card-header-row">
           <h2 id="modal-add-compra-title">Agregar compra</h2>
@@ -157,63 +157,69 @@
 
       <div class="modal-card-body">
         <div class="modal-tab-panel" data-tab-panel="detalles">
-          <label>Tienda</label>
-          <div class="row">
-            <select id="compra-tienda-select">
-              <option value="">— Elegir tienda —</option>
-              <% tags.forEach(function(t) { %>
-                <option value="<%= t.id %>" data-name="<%= t.name %>"><%= t.name %></option>
-              <% }) %>
-            </select>
-            <button type="button" class="icon-action" id="btn-toggle-new-tienda" title="Agregar tienda nueva">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-            </button>
-          </div>
-          <div class="row mt hidden" id="new-compra-tienda-row">
-            <input type="text" id="new-compra-tag-name" placeholder="Nueva etiqueta, ej. Depop" />
-            <button type="button" id="btn-add-compra-tag">Agregar</button>
-          </div>
+          <div class="compra-detalles-grid">
+            <div class="compra-detalles-fields">
+              <label>Tienda</label>
+              <div class="row">
+                <select id="compra-tienda-select">
+                  <option value="">— Elegir tienda —</option>
+                  <% tags.forEach(function(t) { %>
+                    <option value="<%= t.id %>" data-name="<%= t.name %>"><%= t.name %></option>
+                  <% }) %>
+                </select>
+                <button type="button" class="icon-action" id="btn-toggle-new-tienda" title="Agregar tienda nueva">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                </button>
+              </div>
+              <div class="row mt hidden" id="new-compra-tienda-row">
+                <input type="text" id="new-compra-tag-name" placeholder="Nueva etiqueta, ej. Depop" />
+                <button type="button" id="btn-add-compra-tag">Agregar</button>
+              </div>
 
-          <label class="mt">Correo</label>
-          <input type="email" id="compra-correo-field" required placeholder="ej. tucorreo@gmail.com" />
+              <label class="mt">Correo</label>
+              <input type="email" id="compra-correo-field" required placeholder="ej. tucorreo@gmail.com" />
 
-          <label class="mt">Tarjeta usada</label>
-          <div class="row">
-            <select id="compra-tarjeta-select">
-              <option value="">— Elegir tarjeta —</option>
-            </select>
-            <button type="button" class="icon-action" id="btn-toggle-new-tarjeta" title="Agregar tarjeta nueva">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-            </button>
+              <label class="mt">Tarjeta usada</label>
+              <div class="row">
+                <select id="compra-tarjeta-select">
+                  <option value="">— Elegir tarjeta —</option>
+                </select>
+                <button type="button" class="icon-action" id="btn-toggle-new-tarjeta" title="Agregar tarjeta nueva">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                </button>
+              </div>
+              <div class="row mt hidden" id="new-compra-tarjeta-row">
+                <input type="text" id="new-compra-tarjeta-value" placeholder="Nueva tarjeta, ej. Visa terminada en 1234" />
+                <button type="button" id="btn-add-compra-tarjeta">Agregar</button>
+              </div>
+
+              <label class="mt">Descripción</label>
+              <input type="text" id="compra-descripcion-field" placeholder="ej. Amazon Echo" />
+
+              <div id="compra-monto-groups"></div>
+              <p class="muted field-hint" id="compra-monto-hint">Elige la tienda arriba para poder poner el gasto.</p>
+            </div>
+
+            <div class="compra-detalles-photo">
+              <label>Foto del producto</label>
+              <div class="compra-imagen-paste" id="compra-imagen-paste" tabindex="0">
+                <img id="compra-imagen-preview" class="hidden" alt="Foto del producto" />
+                <span class="muted" id="compra-imagen-placeholder">Haz clic aquí y pega una imagen (Ctrl+V)</span>
+                <button type="button" class="icon-action danger-hover hidden" id="btn-remove-imagen" title="Quitar imagen">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
+            </div>
           </div>
-          <div class="row mt hidden" id="new-compra-tarjeta-row">
-            <input type="text" id="new-compra-tarjeta-value" placeholder="Nueva tarjeta, ej. Visa terminada en 1234" />
-            <button type="button" id="btn-add-compra-tarjeta">Agregar</button>
-          </div>
-
-          <label class="mt">Descripción</label>
-          <input type="text" id="compra-descripcion-field" placeholder="ej. Amazon Echo" />
-
-          <label class="mt">Foto del producto</label>
-          <div class="compra-imagen-paste" id="compra-imagen-paste" tabindex="0">
-            <img id="compra-imagen-preview" class="hidden" alt="Foto del producto" />
-            <span class="muted" id="compra-imagen-placeholder">Haz clic aquí y pega una imagen (Ctrl+V)</span>
-            <button type="button" class="icon-action danger-hover hidden" id="btn-remove-imagen" title="Quitar imagen">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
-          </div>
-
-          <div id="compra-monto-groups"></div>
-          <p class="muted field-hint" id="compra-monto-hint">Elige la tienda arriba para poder poner el gasto.</p>
         </div>
 
         <div class="modal-tab-panel hidden" data-tab-panel="trackings">
@@ -226,6 +232,19 @@
         <button type="submit" class="primary" id="btn-submit-compra">Guardar compra</button>
       </div>
     </form>
+  </div>
+
+  <!-- Modal de información de un producto enviado (solo lectura) -->
+  <div id="modal-producto-info" class="modal hidden">
+    <div class="card modal-card producto-info-card">
+      <button type="button" class="icon-action modal-close-btn btn-cancel" title="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+      <div id="producto-info-content"></div>
+    </div>
   </div>
 
   <!-- Modal de confirmación genérico -->

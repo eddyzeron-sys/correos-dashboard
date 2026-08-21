@@ -133,6 +133,7 @@ body {
   font-size: 0.94rem;
 }
 .card-wide { max-width: 580px; }
+.card-xwide { max-width: 700px; }
 
 h1 { font-size: 1.35rem; margin: 0 0 4px; font-weight: 700; letter-spacing: -0.01em; }
 h2 { font-size: 0.98rem; margin: 22px 0 10px; font-weight: 700; }
@@ -568,32 +569,41 @@ button.link:hover { background: none; color: var(--accent-dark); }
 }
 .compra-email-card .icon-actions-group { flex-shrink: 0; }
 
-/* ---------- Foto del producto (pegar del portapapeles) ---------- */
+/* ---------- Foto del producto: columna aparte a la derecha del modal ---------- */
+.compra-detalles-grid {
+  display: grid;
+  grid-template-columns: 1fr 190px;
+  gap: 24px;
+  align-items: start;
+}
+.compra-detalles-fields label:first-child { margin-top: 0; }
+.compra-detalles-photo { position: sticky; top: 0; }
+.compra-detalles-photo label { margin-top: 0; }
+
 .compra-imagen-paste {
   margin-top: 6px;
-  min-height: 60px;
+  width: 190px;
+  height: 190px;
   border: 1.5px dashed var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface-muted);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  justify-content: center;
   position: relative;
   cursor: text;
-  padding: 8px 40px 8px 14px;
+  padding: 10px;
   outline: none;
 }
 .compra-imagen-paste:focus { border-color: var(--accent); }
 #compra-imagen-preview {
-  max-height: 96px;
-  max-width: 150px;
+  max-width: 100%;
+  max-height: 100%;
   border-radius: 8px;
   object-fit: contain;
-  margin-left: auto;
 }
 #compra-imagen-preview.hidden { display: none; }
-#compra-imagen-placeholder { font-size: 0.78rem; }
+#compra-imagen-placeholder { font-size: 0.78rem; text-align: center; }
 #compra-imagen-placeholder.hidden { display: none; }
 #btn-remove-imagen {
   position: absolute;
@@ -601,6 +611,7 @@ button.link:hover { background: none; color: var(--accent-dark); }
   right: 6px;
   width: 26px;
   height: 26px;
+  background: #fff;
 }
 
 /* Miniatura de la foto en la tarjeta de "Registro de compras" — chica a
@@ -655,6 +666,27 @@ button.link:hover { background: none; color: var(--accent-dark); }
 .producto-enviado-tienda { font-size: 0.68rem; color: var(--accent-dark); }
 .producto-enviado-tracking { font-size: 0.66rem; color: var(--muted); }
 .producto-enviado-correo { font-size: 0.64rem; overflow-wrap: anywhere; }
+
+/* Tarjeta de información de un producto enviado (solo lectura) */
+.producto-info-card { max-width: 380px; }
+.producto-info-img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  display: block;
+  margin-bottom: 14px;
+}
+.producto-info-img-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+}
+.producto-info-title { margin: 0 0 10px; font-size: 1rem; }
+.producto-info-row { font-size: 0.85rem; margin-top: 8px; overflow-wrap: anywhere; }
+.producto-info-row:first-of-type { margin-top: 0; }
 
 /* ---------- Mis tarjetas (dentro del panel del correo seleccionado) ---------- */
 .tarjetas-list { display: flex; flex-direction: column; gap: 8px; }

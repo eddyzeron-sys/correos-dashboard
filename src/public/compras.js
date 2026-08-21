@@ -411,11 +411,46 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
+  // Tarjeta de información de solo lectura — clic en "Productos enviados"
+  // muestra esto, no abre el formulario de edición.
+  function productoInfoHtml(r) {
+    const imgHtml = r.imagen
+      ? '<img class="producto-info-img" src="' + r.imagen + '" alt="" />'
+      : '<div class="producto-info-img producto-info-img-placeholder">📦</div>';
+    const tiendaText = r.tiendas.length
+      ? r.tiendas.map((t) => (t.tag_name ? escapeHtml(t.tag_name) : "—") + ": " + formatMontos(t.montos)).join(" · ")
+      : "—";
+    const trackingsHtml = r.trackings.length
+      ? r.trackings.map((t) => '<div class="producto-info-row">📦 ' + escapeHtml(t.numero_tracking) + "</div>").join("")
+      : '<div class="producto-info-row muted">Sin tracking</div>';
+    return (
+      imgHtml +
+      '<h2 class="producto-info-title">' +
+      (r.descripcion ? escapeHtml(r.descripcion) : "Sin descripción") +
+      "</h2>" +
+      '<div class="producto-info-row"><b>Tienda:</b> ' +
+      tiendaText +
+      "</div>" +
+      '<div class="producto-info-row"><b>Tarjeta:</b> ' +
+      (r.tarjeta ? escapeHtml(r.tarjeta) : "—") +
+      "</div>" +
+      '<div class="producto-info-row"><b>Correo:</b> ' +
+      escapeHtml(r.correo || "—") +
+      "</div>" +
+      trackingsHtml
+    );
+  }
+
+  function openProductoInfoModal(data) {
+    document.getElementById("producto-info-content").innerHTML = productoInfoHtml(data);
+    document.getElementById("modal-producto-info").classList.remove("hidden");
+  }
+
   function wireProductosEnviadosClicks() {
     comprasPanel.querySelectorAll(".producto-enviado-card").forEach((card) => {
       card.addEventListener("click", () => {
         const data = registroDataById.get(Number(card.dataset.id));
-        if (data) openCompraModal(data);
+        if (data) openProductoInfoModal(data);
       });
     });
   }
