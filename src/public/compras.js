@@ -169,7 +169,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnAddCompraTarjeta = document.getElementById("btn-add-compra-tarjeta");
   const compraDescripcionField = document.getElementById("compra-descripcion-field");
   const compraMontoHint = document.getElementById("compra-monto-hint");
-  const compraTagsChecklist = document.getElementById("compra-tags-checklist");
+  const compraTiendaSelect = document.getElementById("compra-tienda-select");
+  const btnToggleNewTienda = document.getElementById("btn-toggle-new-tienda");
+  const newCompraTiendaRow = document.getElementById("new-compra-tienda-row");
   const newCompraTagName = document.getElementById("new-compra-tag-name");
   const btnAddCompraTag = document.getElementById("btn-add-compra-tag");
   const compraTrackingsList = document.getElementById("compra-trackings-list");
@@ -706,6 +708,18 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Reconstruye el grupo de monto para la tienda elegida en el <select> (o
+  // lo limpia si no hay ninguna elegida). Como la tienda es de selección
+  // única, siempre hay como mucho un solo grupo.
+  function syncMontoGroupWithTiendaSelect(initialValue) {
+    compraMontoGroups.innerHTML = "";
+    const option = compraTiendaSelect.selectedOptions[0];
+    if (option && option.value) {
+      addMontoGroup(option.value, option.dataset.name || option.textContent.trim(), initialValue || null);
+    }
+    updateMontoPlaceholder();
+  }
+
   // existing === null → modo agregar. existing === {id, correo, tarjeta,
   // tiendas: [{tag_id, tag_name, montos}, ...]} → modo editar. Cada tarjeta
   // de compra es de UNA sola tienda (si compras dos cosas de la misma
@@ -719,9 +733,10 @@ document.addEventListener("DOMContentLoaded", () => {
     newCompraTarjetaValue.value = "";
     compraDescripcionField.value = existing ? existing.descripcion || "" : "";
     newCompraTagName.value = "";
+    newCompraTiendaRow.classList.add("hidden");
     compraMontoGroups.innerHTML = "";
     compraTrackingsList.innerHTML = "";
-    compraTagsChecklist.querySelectorAll(".tag-card").forEach((c) => c.classList.remove("selected"));
+    compraTiendaSelect.value = "";
     resetModalTabs();
 
     if (existing) {
@@ -729,11 +744,19 @@ document.addEventListener("DOMContentLoaded", () => {
       // al editar solo se conserva la primera (ahora es 1 a 1).
       const t = existing.tiendas[0];
       if (t) {
-        const card = compraTagsChecklist.querySelector('.tag-card[data-tag-id="' + t.tag_id + '"]');
-        if (card) {
-          card.classList.add("selected");
+        let option = Array.from(compraTiendaSelect.options).find((o) => o.value === String(t.tag_id));
+        if (!option && t.tag_name) {
+          // Etiqueta ya borrada — se agrega aparte para no perder el dato.
+          option = document.createElement("option");
+          option.value = t.tag_id;
+          option.textContent = t.tag_name;
+          option.dataset.name = t.tag_name;
+          compraTiendaSelect.appendChild(option);
+        }
+        if (option) {
+          compraTiendaSelect.value = String(t.tag_id);
           const firstValue = (t.montos || "").split(",")[0].trim();
-          addMontoGroup(t.tag_id, card.querySelector(".tag-card-name").textContent.trim(), firstValue);
+          syncMontoGroupWithTiendaSelect(firstValue);
         }
       }
       (existing.trackings || []).forEach((t) => addTrackingRow(t));
@@ -743,22 +766,17 @@ document.addEventListener("DOMContentLoaded", () => {
     modalAddCompra.classList.remove("hidden");
   }
 
-  // La tienda es selección única — al elegir una se reemplaza la anterior.
-  // Dar clic en la ya elegida la deselecciona.
-  compraTagsChecklist.addEventListener("click", (e) => {
-    const card = e.target.closest(".tag-card");
-    if (!card) return;
-    const tagId = card.dataset.tagId;
-    const alreadySelected = card.classList.contains("selected");
-    compraTagsChecklist.querySelectorAll(".tag-card").forEach((c) => c.classList.remove("selected"));
-    compraMontoGroups.innerHTML = "";
-    if (!alreadySelected) {
-      const tagName = card.querySelector(".tag-card-name").textContent.trim();
-      card.classList.add("selected");
-      addMontoGroup(tagId, tagName, null);
-    }
-    updateMontoPlaceholder();
-  });
+  compraTiendaSelect.addEventListener("change", () => syncMontoGroupWithTiendaSelect(null));
+
+  if (btnToggleNewTienda) {
+    btnToggleNewTienda.addEventListener("click", () => {
+      const nowHidden = newCompraTiendaRow.classList.toggle("hidden");
+      if (!nowHidden) {
+        newCompraTagName.value = "";
+        newCompraTagName.focus();
+      }
+    });
+  }
 
   if (btnAddCompraTag) {
     btnAddCompraTag.addEventListener("click", () => {
@@ -778,20 +796,15 @@ document.addEventListener("DOMContentLoaded", () => {
             showToast(data.error);
             return;
           }
-          const emptyMsg = document.getElementById("compra-tags-empty-msg");
-          if (emptyMsg) emptyMsg.remove();
-          compraTagsChecklist.insertAdjacentHTML(
-            "beforeend",
-            '<div class="tag-card" data-tag-id="' + data.id + '"><span class="tag-card-name">' +
-              escapeHtml(data.name) +
-              "</span></div>"
-          );
-          compraTagsChecklist.querySelectorAll(".tag-card").forEach((c) => c.classList.remove("selected"));
-          compraMontoGroups.innerHTML = "";
-          const newCard = compraTagsChecklist.lastElementChild;
-          newCard.classList.add("selected");
-          addMontoGroup(data.id, data.name, null);
+          const option = document.createElement("option");
+          option.value = data.id;
+          option.textContent = data.name;
+          option.dataset.name = data.name;
+          compraTiendaSelect.appendChild(option);
+          compraTiendaSelect.value = String(data.id);
+          syncMontoGroupWithTiendaSelect(null);
           newCompraTagName.value = "";
+          newCompraTiendaRow.classList.add("hidden");
         })
         .catch((err) => {
           if (err.message !== "unauthenticated") showToast("No se pudo crear la etiqueta.");

@@ -158,17 +158,23 @@
       <div class="modal-card-body">
         <div class="modal-tab-panel" data-tab-panel="detalles">
           <label>Tienda</label>
-          <div class="tag-checklist" id="compra-tags-checklist">
-            <% tags.forEach(function(t) { %>
-              <div class="tag-card" data-tag-id="<%= t.id %>">
-                <span class="tag-card-name"><%= t.name %></span>
-              </div>
-            <% }) %>
+          <div class="row">
+            <select id="compra-tienda-select">
+              <option value="">— Elegir tienda —</option>
+              <% tags.forEach(function(t) { %>
+                <option value="<%= t.id %>" data-name="<%= t.name %>"><%= t.name %></option>
+              <% }) %>
+            </select>
+            <button type="button" class="icon-action" id="btn-toggle-new-tienda" title="Agregar tienda nueva">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
           </div>
-          <% if (!tags.length) { %><p class="tag-check-empty" id="compra-tags-empty-msg">No tienes etiquetas todavía.</p><% } %>
-          <div class="row mt">
+          <div class="row mt hidden" id="new-compra-tienda-row">
             <input type="text" id="new-compra-tag-name" placeholder="Nueva etiqueta, ej. Depop" />
-            <button type="button" id="btn-add-compra-tag">+ Agregar</button>
+            <button type="button" id="btn-add-compra-tag">Agregar</button>
           </div>
 
           <label class="mt">Correo</label>
