@@ -162,8 +162,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const modalAddCompra = document.getElementById("modal-add-compra");
   const formAddCompra = document.getElementById("form-add-compra");
   const compraCorreoField = document.getElementById("compra-correo-field");
-  const compraTarjetasChecklist = document.getElementById("compra-tarjetas-checklist");
-  const compraTarjetasEmptyMsg = document.getElementById("compra-tarjetas-empty-msg");
+  const compraTarjetaSelect = document.getElementById("compra-tarjeta-select");
+  const btnToggleNewTarjeta = document.getElementById("btn-toggle-new-tarjeta");
+  const newCompraTarjetaRow = document.getElementById("new-compra-tarjeta-row");
   const newCompraTarjetaValue = document.getElementById("new-compra-tarjeta-value");
   const btnAddCompraTarjeta = document.getElementById("btn-add-compra-tarjeta");
   const compraDescripcionField = document.getElementById("compra-descripcion-field");
@@ -317,9 +318,16 @@ document.addEventListener("DOMContentLoaded", () => {
   // ---------- "Mis tarjetas" del correo seleccionado ----------
   function tarjetaCardHtml(t) {
     const usedBadge = t.used ? '<span class="compra-tarjeta-badge">Usada</span>' : "";
+    const enviadaCount = t.enviada_count || 0;
+    const enviadaBadge =
+      enviadaCount > 0
+        ? '<span class="compra-tarjeta-badge compra-tarjeta-badge-enviada">Enviada' +
+          (enviadaCount > 1 ? " " + enviadaCount : "") +
+          "</span>"
+        : "";
     return (
       '<div class="compra-tarjeta-card" data-id="' + t.id + '" data-tarjeta="' + escapeHtml(t.tarjeta) + '" data-used="' + (t.used ? "1" : "0") + '">' +
-      '<span class="compra-tarjeta-text">' + escapeHtml(t.tarjeta) + usedBadge + "</span>" +
+      '<span class="compra-tarjeta-text">' + escapeHtml(t.tarjeta) + usedBadge + enviadaBadge + "</span>" +
       '<div class="icon-actions-group">' +
       '<button type="button" class="icon-action btn-edit-tarjeta" title="Editar" data-id="' + t.id + '" data-tarjeta="' + escapeHtml(t.tarjeta) + '">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
@@ -628,48 +636,37 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ---------- Selector de "Mis tarjetas" dentro del modal de compra ----------
-  function tarjetaChipHtml(tarjeta) {
-    return (
-      '<div class="tag-card" data-tarjeta="' + escapeHtml(tarjeta) + '"><span class="tag-card-name">' +
-      escapeHtml(tarjeta) +
-      "</span></div>"
-    );
-  }
-
-  // Reconstruye el picker con las tarjetas guardadas del correo seleccionado.
-  // Si selectedText no está entre ellas (tarjeta vieja escrita a mano antes
-  // de este cambio), se agrega como opción aparte para no perder el dato.
-  function renderCompraTarjetasChecklist(selectedText) {
-    compraTarjetasChecklist.innerHTML = "";
-    if (selectedText && !currentTarjetas.some((t) => t.tarjeta === selectedText)) {
-      compraTarjetasChecklist.insertAdjacentHTML("beforeend", tarjetaChipHtml(selectedText));
+  // Reconstruye el <select> con las tarjetas del correo, la más reciente
+  // primero. Si selectedText no está entre ellas (tarjeta vieja escrita a
+  // mano antes de este cambio), se agrega como opción aparte para no perder
+  // el dato.
+  function renderCompraTarjetaSelect(selectedText) {
+    const ordered = currentTarjetas.slice().sort((a, b) => b.id - a.id);
+    let optionsHtml = '<option value="">— Elegir tarjeta —</option>';
+    if (selectedText && !ordered.some((t) => t.tarjeta === selectedText)) {
+      optionsHtml += '<option value="' + escapeHtml(selectedText) + '">' + escapeHtml(selectedText) + "</option>";
     }
-    currentTarjetas.forEach((t) => {
-      compraTarjetasChecklist.insertAdjacentHTML("beforeend", tarjetaChipHtml(t.tarjeta));
-    });
-    if (compraTarjetasEmptyMsg) {
-      compraTarjetasEmptyMsg.classList.toggle("hidden", compraTarjetasChecklist.children.length > 0);
-    }
-    if (selectedText) {
-      const card = Array.from(compraTarjetasChecklist.querySelectorAll(".tag-card")).find(
-        (c) => c.dataset.tarjeta === selectedText
-      );
-      if (card) card.classList.add("selected");
-    }
+    optionsHtml += ordered
+      .map((t) => '<option value="' + escapeHtml(t.tarjeta) + '">' + escapeHtml(t.tarjeta) + "</option>")
+      .join("");
+    compraTarjetaSelect.innerHTML = optionsHtml;
+    compraTarjetaSelect.value = selectedText || "";
+    newCompraTarjetaRow.classList.add("hidden");
   }
 
   function getSelectedTarjetaText() {
-    const card = compraTarjetasChecklist.querySelector(".tag-card.selected");
-    return card ? card.dataset.tarjeta : "";
+    return compraTarjetaSelect.value;
   }
 
-  compraTarjetasChecklist.addEventListener("click", (e) => {
-    const card = e.target.closest(".tag-card");
-    if (!card) return;
-    const alreadySelected = card.classList.contains("selected");
-    compraTarjetasChecklist.querySelectorAll(".tag-card").forEach((c) => c.classList.remove("selected"));
-    if (!alreadySelected) card.classList.add("selected");
-  });
+  if (btnToggleNewTarjeta) {
+    btnToggleNewTarjeta.addEventListener("click", () => {
+      const nowHidden = newCompraTarjetaRow.classList.toggle("hidden");
+      if (!nowHidden) {
+        newCompraTarjetaValue.value = "";
+        newCompraTarjetaValue.focus();
+      }
+    });
+  }
 
   if (btnAddCompraTarjeta) {
     btnAddCompraTarjeta.addEventListener("click", () => {
@@ -691,10 +688,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
           }
           currentTarjetas.unshift(data);
-          compraTarjetasChecklist.querySelectorAll(".tag-card").forEach((c) => c.classList.remove("selected"));
-          compraTarjetasChecklist.insertAdjacentHTML("afterbegin", tarjetaChipHtml(data.tarjeta));
-          compraTarjetasChecklist.firstElementChild.classList.add("selected");
-          if (compraTarjetasEmptyMsg) compraTarjetasEmptyMsg.classList.add("hidden");
+          renderCompraTarjetaSelect(data.tarjeta);
           newCompraTarjetaValue.value = "";
           // Si la pestaña "Mis tarjetas" ya está en el DOM, se refleja ahí también.
           const list = comprasPanel.querySelector(".tarjetas-list");
@@ -721,7 +715,7 @@ document.addEventListener("DOMContentLoaded", () => {
     modalTitle.textContent = existing ? "Editar compra" : "Agregar compra";
     btnSubmitCompra.textContent = existing ? "Guardar cambios" : "Guardar compra";
     compraCorreoField.value = existing ? existing.correo : "";
-    renderCompraTarjetasChecklist(existing ? existing.tarjeta || "" : "");
+    renderCompraTarjetaSelect(existing ? existing.tarjeta || "" : "");
     newCompraTarjetaValue.value = "";
     compraDescripcionField.value = existing ? existing.descripcion || "" : "";
     newCompraTagName.value = "";

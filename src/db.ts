@@ -327,6 +327,21 @@ if (tableExists("compra_tarjetas") && !columnExists("compra_tarjetas", "compra_e
   );
 }
 
+// "Mis tarjetas" no debe permitir la misma tarjeta repetida en el mismo
+// correo. Antes de crear el índice único se eliminan duplicados que hayan
+// quedado de antes de esta regla (se conserva el más reciente de cada texto).
+if (
+  tableExists("compra_tarjetas") &&
+  !db.prepare("SELECT name FROM sqlite_master WHERE type='index' AND name = 'idx_compra_tarjetas_unique'").get()
+) {
+  db.exec(
+    `DELETE FROM compra_tarjetas WHERE id NOT IN (
+       SELECT MAX(id) FROM compra_tarjetas GROUP BY compra_email_id, tarjeta
+     );`
+  );
+  db.exec("CREATE UNIQUE INDEX idx_compra_tarjetas_unique ON compra_tarjetas(compra_email_id, tarjeta);");
+}
+
 // Una compra ahora puede tener varias tiendas dentro de una sola tarjeta
 // (compra_registro_tiendas). Las filas viejas de compra_registros (una por
 // tienda) se migran una sola vez a esa tabla hija, conservando cada tienda

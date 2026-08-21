@@ -226,6 +226,7 @@ button.link:hover { background: none; color: var(--accent-dark); }
 .btn-icon-only svg { width: 18px; height: 18px; }
 
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.row.hidden { display: none; }
 .row input, .row select { flex: 1; min-width: 140px; }
 .inline { display: inline; }
 .mt { margin-top: 16px; }
@@ -599,6 +600,7 @@ button.link:hover { background: none; color: var(--accent-dark); }
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
+.compra-tarjeta-badge-enviada { color: #16a34a; background: #e7f7ee; }
 .compra-tarjeta-card .icon-actions-group { flex-shrink: 0; }
 
 .compras-panel {

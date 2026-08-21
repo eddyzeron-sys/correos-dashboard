@@ -17,16 +17,23 @@ function getOwnEmail(req: Request, id: string): CompraEmailRow | undefined {
     .get(id, req.user!.id) as CompraEmailRow | undefined;
 }
 
-type TarjetaWithUsage = CompraTarjetaRow & { used: number };
+type TarjetaWithUsage = CompraTarjetaRow & { used: number; enviada_count: number };
 
 // "Usada" = ya existe alguna compra de este correo con ese mismo texto de
-// tarjeta. Las sin usar van primero, las usadas al final.
+// tarjeta. "Enviada" = de esas compras, cuántas ya tienen algún tracking
+// cargado. Las sin usar van primero, las usadas al final.
 function listTarjetasForEmail(emailId: number): TarjetaWithUsage[] {
   return db
     .prepare(
-      `SELECT t.*, EXISTS(
-         SELECT 1 FROM compra_registros r WHERE r.compra_email_id = t.compra_email_id AND r.tarjeta = t.tarjeta
-       ) as used
+      `SELECT t.*,
+         EXISTS(
+           SELECT 1 FROM compra_registros r WHERE r.compra_email_id = t.compra_email_id AND r.tarjeta = t.tarjeta
+         ) as used,
+         (
+           SELECT COUNT(*) FROM compra_registros r
+           WHERE r.compra_email_id = t.compra_email_id AND r.tarjeta = t.tarjeta
+             AND EXISTS(SELECT 1 FROM compra_registro_trackings tr WHERE tr.compra_registro_id = r.id)
+         ) as enviada_count
        FROM compra_tarjetas t
        WHERE t.compra_email_id = ?
        ORDER BY used ASC, t.created_at DESC`
@@ -34,11 +41,19 @@ function listTarjetasForEmail(emailId: number): TarjetaWithUsage[] {
     .all(emailId) as unknown as TarjetaWithUsage[];
 }
 
-function tarjetaIsUsed(emailId: number, tarjeta: string): boolean {
+function getTarjetaUsage(emailId: number, tarjeta: string): { used: boolean; enviadaCount: number } {
   const row = db
-    .prepare("SELECT EXISTS(SELECT 1 FROM compra_registros WHERE compra_email_id = ? AND tarjeta = ?) as used")
-    .get(emailId, tarjeta) as { used: number };
-  return !!row.used;
+    .prepare(
+      `SELECT
+         EXISTS(SELECT 1 FROM compra_registros WHERE compra_email_id = ? AND tarjeta = ?) as used,
+         (
+           SELECT COUNT(*) FROM compra_registros r
+           WHERE r.compra_email_id = ? AND r.tarjeta = ?
+             AND EXISTS(SELECT 1 FROM compra_registro_trackings tr WHERE tr.compra_registro_id = r.id)
+         ) as enviada_count`
+    )
+    .get(emailId, tarjeta, emailId, tarjeta) as { used: number; enviada_count: number };
+  return { used: !!row.used, enviadaCount: row.enviada_count };
 }
 
 function getOwnTarjeta(req: Request, id: string): CompraTarjetaRow | undefined {
@@ -153,10 +168,15 @@ router.post("/compras/tarjetas", (req, res) => {
     res.status(400).json({ error: "La tarjeta es obligatoria." });
     return;
   }
-  const info = db
-    .prepare("INSERT INTO compra_tarjetas (user_id, compra_email_id, tarjeta) VALUES (?, ?, ?)")
-    .run(req.user!.id, email.id, tarjeta);
-  res.json({ id: Number(info.lastInsertRowid), tarjeta, used: tarjetaIsUsed(email.id, tarjeta) });
+  try {
+    const info = db
+      .prepare("INSERT INTO compra_tarjetas (user_id, compra_email_id, tarjeta) VALUES (?, ?, ?)")
+      .run(req.user!.id, email.id, tarjeta);
+    const usage = getTarjetaUsage(email.id, tarjeta);
+    res.json({ id: Number(info.lastInsertRowid), tarjeta, used: usage.used, enviada_count: usage.enviadaCount });
+  } catch {
+    res.status(400).json({ error: "Ya tienes esa tarjeta guardada para este correo." });
+  }
 });
 
 router.post("/compras/tarjetas/:id", (req, res) => {
@@ -170,8 +190,13 @@ router.post("/compras/tarjetas/:id", (req, res) => {
     res.status(400).json({ error: "La tarjeta es obligatoria." });
     return;
   }
-  db.prepare("UPDATE compra_tarjetas SET tarjeta = ? WHERE id = ?").run(tarjeta, existing.id);
-  res.json({ id: existing.id, tarjeta, used: tarjetaIsUsed(existing.compra_email_id, tarjeta) });
+  try {
+    db.prepare("UPDATE compra_tarjetas SET tarjeta = ? WHERE id = ?").run(tarjeta, existing.id);
+    const usage = getTarjetaUsage(existing.compra_email_id, tarjeta);
+    res.json({ id: existing.id, tarjeta, used: usage.used, enviada_count: usage.enviadaCount });
+  } catch {
+    res.status(400).json({ error: "Ya tienes esa tarjeta guardada para este correo." });
+  }
 });
 
 router.post("/compras/tarjetas/:id/delete", (req, res) => {

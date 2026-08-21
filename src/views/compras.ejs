@@ -175,11 +175,20 @@
           <input type="email" id="compra-correo-field" required placeholder="ej. tucorreo@gmail.com" />
 
           <label class="mt">Tarjeta usada</label>
-          <div class="tag-checklist" id="compra-tarjetas-checklist"></div>
-          <p class="tag-check-empty hidden" id="compra-tarjetas-empty-msg">No tienes tarjetas guardadas para este correo todavía.</p>
-          <div class="row mt">
+          <div class="row">
+            <select id="compra-tarjeta-select">
+              <option value="">— Elegir tarjeta —</option>
+            </select>
+            <button type="button" class="icon-action" id="btn-toggle-new-tarjeta" title="Agregar tarjeta nueva">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+          </div>
+          <div class="row mt hidden" id="new-compra-tarjeta-row">
             <input type="text" id="new-compra-tarjeta-value" placeholder="Nueva tarjeta, ej. Visa terminada en 1234" />
-            <button type="button" id="btn-add-compra-tarjeta">+ Agregar</button>
+            <button type="button" id="btn-add-compra-tarjeta">Agregar</button>
           </div>
 
           <label class="mt">Descripción</label>
